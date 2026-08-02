@@ -1,0 +1,71 @@
+{
+  "name": "duplexsystem.org",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "module",
+  "directories": {
+    "doc": "docs"
+  },
+  "scripts": {
+    "prebuild": "python3 scripts/gen_math_names.py && python3 scripts/subset_fonts.py && python3 scripts/check_ligatures.py && node scripts/check_error_art.mjs",
+    "build": "astro build && npx pagefind --site dist && node scripts/postprocess.mjs dist --gates",
+    "dev": "astro dev",
+    "preview": "astro preview",
+    "serve": "node scripts/serve.mjs",
+    "test": "vitest run",
+    "deploy": "npm run build && rsync -az --delete dist/ duplexsystem.org:/var/www/duplexsystem.org/",
+    "verify:embeds": "rm -rf dist-verify && INCLUDE_DRAFTS=1 astro build --outDir dist-verify && (node scripts/check_embeds.mjs dist-verify; ec=$?; rm -rf dist-verify; exit $ec)",
+    "preview:build": "python3 scripts/subset_fonts.py --include-drafts && rm -rf dist-preview-stage && INCLUDE_DRAFTS=1 PORTAL_ORIGIN=${PORTAL_ORIGIN:-http://localhost:8088/} astro build --outDir dist-preview-stage && npx pagefind --site dist-preview-stage && node scripts/postprocess.mjs dist-preview-stage --spelling && mkdir -p dist-preview && rsync -a --delete-delay dist-preview-stage/ dist-preview/"
+  },
+  "keywords": [
+    "astro",
+    "small-web",
+    "static-site"
+  ],
+  "author": "duplexsystem",
+  "license": "AGPL-3.0-or-later",
+  "private": true,
+  "repository": "github:duplexsystem/duplexsystem.org",
+  "dependencies": {
+    "@astro-community/astro-embed-bluesky": "^0.2.3",
+    "@astro-community/astro-embed-link-preview": "^0.3.1",
+    "@astro-community/astro-embed-mastodon": "^0.1.1",
+    "@astro-community/astro-embed-twitter": "^0.5.11",
+    "@astro-community/astro-embed-vimeo": "^0.3.12",
+    "@astro-community/astro-embed-youtube": "^0.5.10",
+    "@astrojs/markdown-remark": "^7.2.2",
+    "@astrojs/mdx": "^7.0.5",
+    "astro": "^7.1.6",
+    "astro-embed": "^0.13.1",
+    "shiki": "^4.3.1"
+  },
+  "devDependencies": {
+    "@astro-community/astro-embed-integration": "^0.12.1",
+    "@astrojs/rss": "^4.0.19",
+    "@astrojs/sitemap": "^3.7.3",
+    "@types/js-yaml": "^4.0.9",
+    "acorn": "^8.18.0",
+    "astro-seo": "^1.1.0",
+    "blurhash": "^2.0.5",
+    "blurhash-to-css": "^0.5.5",
+    "cspell": "^10.0.1",
+    "esbuild": "^0.28.1",
+    "js-yaml": "^4.3.0",
+    "katex": "^0.18.1",
+    "lightningcss": "^1.33.0",
+    "pagefind": "^1.5.2",
+    "prettier": "^3.9.6",
+    "prettier-plugin-astro": "^0.14.1",
+    "rehype-katex": "^7.0.1",
+    "remark-math": "^6.0.0",
+    "sharp": "^0.35.3",
+    "svgo": "^4.0.2",
+    "typescript": "^5.9.3",
+    "unicode-emoji-json": "^0.9.0",
+    "unist-util-visit": "^5.1.0",
+    "vega": "^6.3.1",
+    "vega-lite": "^6.4.3",
+    "vitest": "^3.2.7"
+  }
+}

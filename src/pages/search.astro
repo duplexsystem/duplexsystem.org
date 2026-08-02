@@ -1,0 +1,77 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Panel from '../components/Panel.astro';
+import emojiData from 'unicode-emoji-json';
+
+// Only the emoji this site actually uses; the full table is 1,914 entries.
+// import.meta.glob, not node:fs: Astro relocates SSR modules before executing
+// them, so an import.meta.url-relative path resolves under dist/.prerender/.
+const sources = import.meta.glob('../content/blog/*.mdx', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+}) as Record<string, string>;
+
+const corpus = Object.values(sources).join('\n');
+const emojiNames = Object.fromEntries(
+  Object.keys(emojiData)
+    .sort((a, b) => b.length - a.length)
+    .filter((e) => corpus.includes(e))
+    .map((e) => [e, emojiData[e].name]),
+);
+---
+
+<BaseLayout title="search · duplexsystem" description="Search this site.">
+  <Panel title="search" meta="posts">
+    <div class="pfwrap">
+      <pagefind-input instance="site"></pagefind-input>
+      <pagefind-summary instance="site" default-message="Search this site."></pagefind-summary>
+      <pagefind-results instance="site"></pagefind-results>
+      <pagefind-config instance="site"></pagefind-config>
+    </div>
+    <noscript>
+      <p class="mut">
+        Search needs JavaScript, try the <a href="/blog/">full writings list</a> or <a href="/tags/"
+          >tags</a
+        > instead.
+      </p>
+    </noscript>
+    <script
+      is:inline
+      type="application/json"
+      id="emoji-names"
+      set:html={JSON.stringify(emojiNames)}
+    />
+  </Panel>
+</BaseLayout>
+
+<link rel="stylesheet" href="/pagefind/pagefind-component-ui.css" />
+<script type="module" src="/pagefind/pagefind-component-ui.js"></script>
+<script src="/js/search-terms.js" defer></script>
+
+<style is:global>
+  .pfwrap {
+    --pf-background: var(--panel);
+    --pf-text: var(--ink);
+    --pf-text-secondary: var(--mut);
+    --pf-text-muted: var(--mut);
+    --pf-border: var(--line);
+    --pf-border-focus: var(--acc);
+    --pf-border-radius: var(--radius);
+    --pf-outline-focus: var(--acc);
+    --pf-hover: rgba(180, 140, 255, 0.12);
+    --pf-mark: var(--acc);
+    --pf-font: var(--font-literata), 'Noto Emoji', Georgia, serif;
+    --pf-modal-backdrop: rgba(15, 11, 22, 0.72);
+  }
+
+  /* --pf-mark only sets `color`, which a color emoji ignores; a background
+     highlights glyphs too. !important is required: Pagefind ships
+     `:is(*,#\#):is(*,#\#):is(*,#\#) .pf-result-excerpt mark { background: 0 0 }`,
+     which scores (3,1,1) and no ordinary rule can reach. */
+  .pfwrap mark {
+    background: rgba(180, 140, 255, 0.22) !important;
+    border-radius: 2px;
+    padding: 0 0.12em;
+  }
+</style>

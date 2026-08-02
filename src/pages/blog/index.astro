@@ -1,0 +1,14 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Panel from '../../components/Panel.astro';
+import PostList from '../../components/PostList.astro';
+import { getPublishedPosts, countLabel } from '../../lib/posts';
+
+const posts = await getPublishedPosts();
+---
+
+<BaseLayout title="blog · duplexsystem" description="Writings of mine.">
+  <Panel title="all writing" meta={countLabel(posts.length, 'post')}>
+    <PostList posts={posts} showDescription />
+  </Panel>
+</BaseLayout>

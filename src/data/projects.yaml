@@ -1,0 +1,10 @@
+projects:
+  - name: duplexsystem.org
+    href: https://github.com/duplexsystem/duplexsystem.org
+    note: This site.
+  - name: Seismic
+    href: https://github.com/PolyhedralDev/Seismic
+    note: A Java sampler, math, type, and utility library.
+  - name: Terra
+    href: https://github.com/PolyhedralDev/Terra
+    note: A modern world generation modding platform, primarily for Minecraft.

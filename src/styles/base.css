@@ -1,0 +1,671 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+
+html {
+  background: var(--bg);
+  color: var(--ink);
+}
+
+body {
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-literata), 'Noto Emoji', Georgia, serif;
+  font-size: 17px;
+  line-height: 1.65;
+  font-variation-settings: 'opsz' 14;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Departure Mono is a bitmap face on a 10px grid. Keep sizes multiples of 10. */
+h1,
+h2,
+h3 {
+  font-family: var(--font-departure), 'Noto Emoji', ui-monospace, monospace;
+  font-weight: 400;
+  line-height: 1.1;
+  margin: 0 0 0.5rem;
+}
+h1 {
+  font-size: 40px;
+}
+h2 {
+  font-size: 20px;
+  color: var(--ink);
+  margin-top: 2rem;
+}
+h3 {
+  font-size: 20px;
+  color: var(--acc);
+  margin-top: 1.5rem;
+}
+h4,
+h5,
+h6 {
+  font-family: var(--font-literata), 'Noto Emoji', Georgia, serif;
+  font-weight: 600;
+  font-size: 17px;
+  margin: 1.25rem 0 0.4rem;
+}
+
+@media (max-width: 40rem) {
+  h1 {
+    font-size: 30px;
+  }
+}
+
+a {
+  color: var(--acc);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+a:focus-visible,
+button:focus-visible,
+input:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 2px;
+}
+
+code,
+kbd,
+samp {
+  font-family: var(--font-jetbrains), 'Noto Emoji', ui-monospace, monospace;
+  font-feature-settings:
+    'calt' 1,
+    'liga' 1;
+  font-size: 0.87em;
+}
+:not(pre) > code {
+  background: var(--code);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 0.05em 0.3em;
+}
+pre {
+  background: var(--code);
+  border: 1px solid var(--line);
+  border-left: 2px solid var(--acc);
+  border-radius: var(--radius);
+  padding: 0.8rem 1rem;
+  overflow-x: auto;
+}
+pre code {
+  background: none;
+  border: 0;
+  padding: 0;
+  font-size: 13px;
+}
+
+pre {
+  user-select: all;
+}
+html.has-copy pre {
+  user-select: auto;
+}
+
+.codewrap {
+  position: relative;
+}
+.codewrap .copy {
+  position: absolute;
+  bottom: 6px;
+  right: 6px;
+  font-family: var(--font-departure), ui-monospace, monospace;
+  font-size: 10px;
+  line-height: 1;
+  padding: 4px 7px;
+  color: var(--mut);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.12s ease;
+}
+.codewrap:hover .copy,
+.codewrap .copy:focus-visible {
+  opacity: 1;
+}
+.codewrap .copy:hover {
+  color: var(--ink);
+  border-color: var(--acc);
+}
+
+@media (hover: none) {
+  .codewrap .copy {
+    display: none;
+  }
+}
+
+blockquote {
+  margin: 1rem 0;
+  padding-left: 0.9rem;
+  border-left: 2px solid rgba(180, 140, 255, 0.45);
+  color: var(--mut);
+  font-style: italic;
+}
+
+.contains-task-list {
+  list-style: none;
+}
+.task-list-item {
+  position: relative;
+}
+/* Drawn by hand: browsers ignore accent-color on a disabled control, and
+   remark emits these disabled. */
+.task-list-item input[type='checkbox'] {
+  appearance: none;
+  -webkit-appearance: none;
+  position: absolute;
+  font-size: inherit;
+  margin: 0;
+  --cb-size: 0.8em;
+  width: var(--cb-size);
+  height: var(--cb-size);
+  left: calc(-1 * var(--cb-size) - 6px);
+  top: 0.3em;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: var(--code);
+  opacity: 1;
+}
+.task-list-item input[type='checkbox']:checked {
+  background: var(--acc-deep);
+  border-color: var(--acc);
+}
+.task-list-item input[type='checkbox']:checked::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 47%;
+  width: 42%;
+  height: 76%;
+  border: solid var(--ink);
+  border-width: 0 2px 2px 0;
+  transform: translate(-50%, -60%) rotate(45deg);
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+hr {
+  border: 0;
+  border-top: 1px solid var(--line);
+}
+
+.mono {
+  font-family: var(--font-departure), 'Noto Emoji', ui-monospace, monospace;
+}
+.mut {
+  color: var(--mut);
+}
+.measure {
+  max-width: var(--measure);
+}
+.skip-link {
+  position: absolute;
+  left: -9999px;
+}
+.skip-link:focus {
+  left: 0.5rem;
+  top: 0.5rem;
+  background: var(--panel);
+  padding: 0.4rem 0.7rem;
+}
+
+.vh {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+@view-transition {
+  navigation: auto;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}
+
+.codefig {
+  margin: 1rem 0;
+}
+.codefig pre {
+  margin: 0;
+  border-top-left-radius: 0;
+  border-top-right-radius: 0;
+}
+
+.codehead,
+.frame__bar {
+  font-family: var(--font-departure), ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--acc);
+  background: linear-gradient(90deg, rgba(180, 140, 255, 0.15), transparent);
+  border: 1px solid var(--line);
+  border-bottom: 0;
+  border-radius: var(--radius) var(--radius) 0 0;
+  padding: 4px 10px;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.codehead__dir,
+.frame__meta {
+  color: var(--mut);
+}
+
+.frame {
+  margin: 1.4rem 0;
+  min-width: 0;
+}
+.frame__bar {
+  align-items: baseline;
+}
+.frame__src {
+  color: inherit;
+  text-decoration: none;
+}
+.frame__src:hover,
+.frame__src:focus-visible {
+  color: var(--acc);
+  text-decoration: underline;
+}
+.frame__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 75%;
+}
+.frame__meta {
+  flex: none;
+}
+.frame__body {
+  border: 1px solid var(--line);
+  border-radius: 0 0 var(--radius) var(--radius);
+  background: var(--code);
+  overflow: hidden;
+}
+.frame > figcaption {
+  font-size: 14px;
+  color: var(--mut);
+  margin-top: 0.4rem;
+  font-style: italic;
+}
+
+pre.has-line-numbers {
+  padding-left: 1rem;
+}
+pre.has-line-numbers code {
+  counter-reset: line;
+  --ln-gutter: calc(var(--ln-digits, 2) * 1ch);
+  /* Stripe on <code>, not <pre>: `ch` must resolve against the code font. */
+  display: block;
+  background-image: linear-gradient(var(--line), var(--line));
+  background-size: 1px 100%;
+  background-position: calc(var(--ln-gutter) + 0.9ch) 0;
+  background-repeat: no-repeat;
+}
+pre.has-line-numbers code .line {
+  counter-increment: line;
+}
+pre.has-line-numbers code .line::before {
+  content: counter(line);
+  display: inline-block;
+  width: var(--ln-gutter);
+  margin-right: 1.8ch;
+  text-align: right;
+  color: var(--mut);
+  user-select: none;
+}
+
+.hero-wrap {
+  position: relative;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin: 0 0 1.4rem;
+}
+.ph {
+  position: relative;
+  display: block;
+  overflow: hidden;
+}
+.ph__b {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+
+.ph > img,
+.hero-wrap > img {
+  display: block;
+}
+
+.ph--glow {
+  overflow: visible;
+}
+.ph--glow .ph__b {
+  inset: -18px;
+  filter: blur(30px);
+  opacity: 0.55;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ph--glow .ph__b {
+    opacity: 0.4;
+  }
+}
+.ph > img,
+.hero-wrap > img,
+.frame__body > img {
+  position: relative;
+  z-index: 1;
+  color: transparent;
+}
+
+/* Placeholders are siblings of the image, never ancestors: filter and
+   transform apply to the whole subtree and would blur the loaded image too. */
+.hero-blur {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+}
+.hero-wrap .post__hero {
+  margin: 0;
+  display: block;
+  width: 100%;
+  height: auto;
+  position: relative;
+  z-index: 1;
+}
+
+.hero-wrap .post__hero.is-pending,
+.ph > img.is-pending {
+  opacity: 0;
+}
+/* Transition on the revealed state only, or the hiding animates too. */
+.hero-wrap .post__hero.is-pending.is-revealed,
+.ph > img.is-pending.is-revealed {
+  opacity: 1;
+  transition: opacity var(--fade, 350ms) ease;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-wrap .post__hero.is-pending.is-revealed,
+  .ph > img.is-pending.is-revealed {
+    transition: none;
+  }
+}
+
+.frame__scroll {
+  overflow-x: auto;
+  border-radius: 0 0 var(--radius) var(--radius);
+}
+.frame table {
+  border-collapse: collapse;
+  width: 100%;
+  font-size: 15px;
+  table-layout: auto;
+}
+.frame th,
+.frame td {
+  padding: 0.45rem 0.8rem;
+  border-bottom: 1px solid var(--line);
+  /* Never set text-align here: GFM alignment arrives as an inline style. */
+  vertical-align: top;
+}
+.frame thead th {
+  font-family: var(--font-departure), ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--acc);
+  white-space: nowrap;
+  border-bottom: 1px solid var(--line);
+}
+.frame tbody tr:last-child td {
+  border-bottom: 0;
+}
+.frame tbody tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.02);
+}
+.frame__scroll:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: -2px;
+}
+
+.frame__body > img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.chart .frame__body {
+  padding: 0.6rem;
+}
+.chart svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.chart svg text {
+  font-family: var(--font-jetbrains), ui-monospace, monospace;
+}
+
+.frame--embed .frame__body > *:not(script):not(template):not(style) {
+  display: block;
+  width: 100%;
+  margin: 0;
+}
+.frame--embed lite-youtube,
+.frame--embed lite-vimeo {
+  max-width: none;
+  width: 100%;
+}
+
+.ph--video {
+  line-height: 0;
+}
+.ph--video > lite-youtube,
+.ph--video > lite-vimeo {
+  position: relative;
+  z-index: 1;
+  background-color: transparent;
+}
+
+.social__card--standalone {
+  margin-top: 0;
+  border: 0;
+  border-radius: 0;
+}
+.social__card--standalone .social__card-img {
+  width: 100%;
+  aspect-ratio: 1200 / 630;
+  object-fit: cover;
+}
+.social__card--standalone .social__card-text {
+  padding: 0.7rem 1rem 0.9rem;
+}
+
+.social {
+  padding: 1rem;
+}
+
+.social__head {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.7rem;
+}
+.social__avatar {
+  width: 40px;
+  height: 40px;
+  flex: none;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+}
+.social__who {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+}
+.social__name {
+  font-family: var(--font-literata), 'Noto Emoji', Georgia, serif;
+  font-weight: 600;
+  font-size: 15px;
+  line-height: 1.3;
+  color: var(--ink);
+}
+.social__handle,
+.social__foot,
+.social__card-provider {
+  font-family: var(--font-departure), ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--mut);
+}
+.social__body {
+  font-family: var(--font-literata), 'Noto Emoji', Georgia, serif;
+  font-size: 16px;
+  line-height: 1.6;
+  color: var(--ink);
+}
+.social__body :first-child {
+  margin-top: 0;
+}
+.social__body :last-child {
+  margin-bottom: 0;
+}
+.social__body a {
+  color: var(--acc);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.social__body .invisible {
+  display: none;
+}
+
+.social__media {
+  display: grid;
+  gap: 4px;
+  margin-top: 0.7rem;
+}
+.social__media[data-count='2'],
+.social__media[data-count='4'] {
+  grid-template-columns: 1fr 1fr;
+}
+.social__media[data-count='3'] {
+  grid-template-columns: 1fr 1fr 1fr;
+}
+.social__figure {
+  margin: 0;
+  min-width: 0;
+}
+.social__figure .frame__bar {
+  border-radius: var(--radius) var(--radius) 0 0;
+  color: var(--mut);
+}
+.social__figure img {
+  width: 100%;
+  height: auto;
+  display: block;
+  border: 1px solid var(--line);
+  border-top: 0;
+  border-radius: 0 0 var(--radius) var(--radius);
+}
+
+.social__card {
+  display: flex;
+  flex-direction: column;
+  margin-top: 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  text-decoration: none;
+}
+.social__card-img {
+  width: 100%;
+  display: block;
+}
+.social__card-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0.6rem 0.7rem;
+}
+.social__card-title {
+  color: var(--ink);
+  font-size: 15px;
+}
+.social__card-desc {
+  color: var(--mut);
+  font-size: 14px;
+}
+.social__card:hover {
+  border-color: var(--acc);
+}
+
+.social__foot {
+  margin-top: 0.7rem;
+}
+.social__foot a {
+  color: inherit;
+  text-decoration: none;
+}
+.social__foot a:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.gist-source {
+  display: block;
+  margin-top: 0.6rem;
+  font-family: var(--font-departure), ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.1em;
+  color: var(--mut);
+  text-decoration: none;
+}
+.gist-source:hover {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+/* KaTeX renders each expression twice; without this the hidden MathML twin
+   joins the selection and a copied equation comes out doubled. */
+.katex-mathml {
+  user-select: none;
+}
+
+.katex {
+  font-size: 1.05em;
+}
+.katex-display {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding: 0.35rem 0;
+  margin: 1.4rem 0;
+}
+.katex-display > .katex {
+  text-align: initial;
+}

@@ -1,0 +1,40 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Panel from '../../components/Panel.astro';
+import { getPublishedPosts, collectTags, countLabel } from '../../lib/posts';
+
+const tags = collectTags(await getPublishedPosts());
+---
+
+<BaseLayout title="tags · duplexsystem" description="List of writing tags.">
+  <Panel title="tags" meta={countLabel(tags.length, 'tag')}>
+    <ul class="taglist">
+      {
+        tags.map(({ tag, count }) => (
+          <li>
+            <a href={`/tags/${tag}/`}>#{tag}</a>
+            {/* Sighted readers get the bare digit; assistive tech gets the noun. */}
+            <span class="mono mut" aria-hidden="true">
+              {count}
+            </span>
+            <span class="vh">{countLabel(count, 'post')}</span>
+          </li>
+        ))
+      }
+    </ul>
+  </Panel>
+</BaseLayout>
+
+<style>
+  .taglist {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.9rem;
+  }
+  .taglist span {
+    font-size: 10px;
+  }
+</style>

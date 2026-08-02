@@ -1,0 +1,42 @@
+---
+// A link preview, rendered as the same card Bluesky and Mastodon posts use, so
+// there is one set of styles rather than astro-embed's separate layout.
+// Fetching and Open Graph parsing stay astro-embed's (cached via safeGetDOM).
+import { parseOpenGraph } from '../../node_modules/@astro-community/astro-embed-link-preview/lib.ts';
+
+interface Props {
+  id: string;
+}
+
+const { id } = Astro.props;
+const og = await parseOpenGraph(id);
+
+// og:site_name is often missing; the hostname is the reliable label.
+let domain = '';
+try {
+  domain = new URL(og?.url ?? id).hostname.replace(/^www\./, '');
+} catch {
+  domain = id;
+}
+---
+
+{
+  og && (
+    <a class="social__card social__card--standalone" href={og.url ?? id}>
+      {og.image && (
+        <img
+          class="social__card-img"
+          src={og.image}
+          alt={og.imageAlt ?? ''}
+          loading="lazy"
+          decoding="async"
+        />
+      )}
+      <span class="social__card-text">
+        <span class="social__card-provider">{domain}</span>
+        {og.title && <span class="social__card-title">{og.title}</span>}
+        {og.description && <span class="social__card-desc">{og.description}</span>}
+      </span>
+    </a>
+  )
+}

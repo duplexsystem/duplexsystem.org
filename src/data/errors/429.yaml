@@ -1,0 +1,5 @@
+code: '429'
+name: Too Many Requests
+meta: rate limited
+message: >-
+  You have sent too many requests in a given amount of time.

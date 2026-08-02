@@ -1,0 +1,5 @@
+code: '502'
+name: Bad Gateway
+meta: bad gateway
+message: >-
+  The server was acting as a gateway or proxy and received an invalid response from the upstream server.

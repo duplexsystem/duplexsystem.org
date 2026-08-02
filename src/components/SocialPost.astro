@@ -1,0 +1,87 @@
+---
+// One render for Bluesky, Mastodon and Twitter posts. Each platform's own
+// component emits a different DOM shape, so this renders from normalized data
+// (src/lib/social.ts) instead. Fields a platform does not supply are absent.
+import { fetchSocialPost } from '../lib/social';
+import { formatDate } from '../lib/posts';
+
+interface Props {
+  id: string;
+}
+
+const { id } = Astro.props;
+const post = await fetchSocialPost(id);
+
+// Bluesky and Mastodon give ISO timestamps; Twitter's oEmbed gives preformatted
+// text ("March 21, 2006"). Only parseable dates get reformatted.
+const iso = post?.date && !Number.isNaN(Date.parse(post.date)) ? post.date : null;
+const dateLabel = iso ? formatDate(new Date(iso)) : (post?.date ?? null);
+---
+
+{
+  post && (
+    <article class="social" data-platform={post.platform}>
+      <header class="social__head">
+        {post.avatar && (
+          <img
+            class="social__avatar"
+            src={post.avatar}
+            alt=""
+            width="40"
+            height="40"
+            loading="lazy"
+            decoding="async"
+          />
+        )}
+        {(post.name || post.handle) && (
+          <div class="social__who">
+            {post.name && <span class="social__name">{post.name}</span>}
+            {post.handle && <span class="social__handle">{post.handle}</span>}
+          </div>
+        )}
+      </header>
+
+      <div class="social__body" set:html={post.bodyHtml} />
+
+      {post.media.length > 0 && (
+        <div class="social__media" data-count={Math.min(post.media.length, 4)}>
+          {post.media.map((m) => (
+            <figure class="social__figure">
+              <figcaption class="frame__bar">
+                <span class="frame__label">{m.alt || 'image'}</span>
+              </figcaption>
+              <img src={m.src} alt={m.alt} loading="lazy" decoding="async" />
+            </figure>
+          ))}
+        </div>
+      )}
+
+      {post.card && (
+        <a class="social__card" href={post.card.url}>
+          {post.card.image && (
+            <img
+              class="social__card-img"
+              src={post.card.image}
+              alt=""
+              loading="lazy"
+              decoding="async"
+            />
+          )}
+          <span class="social__card-text">
+            {post.card.provider && <span class="social__card-provider">{post.card.provider}</span>}
+            <span class="social__card-title">{post.card.title}</span>
+            {post.card.description && (
+              <span class="social__card-desc">{post.card.description}</span>
+            )}
+          </span>
+        </a>
+      )}
+
+      {dateLabel && (
+        <footer class="social__foot">
+          <a href={post.url}>{dateLabel}</a>
+        </footer>
+      )}
+    </article>
+  )
+}

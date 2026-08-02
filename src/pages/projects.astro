@@ -1,0 +1,39 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Panel from '../components/Panel.astro';
+import { loadProjects } from '../lib/projects';
+
+const projects = loadProjects();
+---
+
+<BaseLayout title="projects · duplexsystem" description="Things I've made.">
+  <Panel title="projects">
+    <ul class="projects">
+      {
+        projects.map((p) => (
+          <li>
+            <>
+              <a href={p.href}>{p.name}</a>
+              <div class="mut">{p.note}</div>
+            </>
+          </li>
+        ))
+      }
+    </ul>
+  </Panel>
+</BaseLayout>
+
+<style>
+  .projects {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .projects li {
+    padding: 0.4rem 0;
+    border-bottom: 1px dotted var(--line);
+  }
+  .projects li:last-child {
+    border-bottom: 0;
+  }
+</style>

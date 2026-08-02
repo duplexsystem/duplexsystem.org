@@ -1,0 +1,22 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Panel from '../../components/Panel.astro';
+import PostList from '../../components/PostList.astro';
+import { getPublishedPosts, collectTags, countLabel } from '../../lib/posts';
+
+export async function getStaticPaths() {
+  const posts = await getPublishedPosts();
+  return collectTags(posts).map(({ tag }) => ({
+    params: { tag },
+    props: { tag, posts: posts.filter((p) => p.data.tags.includes(tag)) },
+  }));
+}
+
+const { tag, posts } = Astro.props;
+---
+
+<BaseLayout title={`#${tag} · duplexsystem`} description={`Writing tagged ${tag}.`}>
+  <Panel title={`tagged #${tag}`} meta={countLabel(posts.length, 'post')}>
+    <PostList posts={posts} showDescription />
+  </Panel>
+</BaseLayout>

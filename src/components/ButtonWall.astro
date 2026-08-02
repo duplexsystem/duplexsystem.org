@@ -1,0 +1,49 @@
+---
+import type { ButtonLink } from '../lib/buttons';
+interface Props {
+  buttons: ButtonLink[];
+  /** Wrap each button in a link. A button with no `href` is never wrapped. */
+  linked?: boolean;
+}
+const { buttons, linked = true } = Astro.props;
+---
+
+<div class="wall">
+  {
+    buttons.map((b) => {
+      const img = (
+        <img
+          src={b.img}
+          width="88"
+          height="31"
+          alt={b.alt ?? b.name}
+          loading="lazy"
+          decoding="async"
+        />
+      );
+      return linked && b.href ? (
+        <a href={b.href} rel="noopener">
+          {img}
+        </a>
+      ) : (
+        img
+      );
+    })
+  }
+</div>
+
+<style>
+  .wall {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+  }
+  .wall a {
+    display: block;
+    text-decoration: none;
+  }
+  .wall img {
+    display: block;
+    image-rendering: pixelated;
+  }
+</style>

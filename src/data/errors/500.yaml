@@ -1,0 +1,4 @@
+code: '500'
+name: Internal Server Error
+meta: server error
+message: Something is on fire on our end. Try again in a moment.

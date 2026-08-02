@@ -1,0 +1,28 @@
+:root {
+  /* Tells the UA and extensions like Dark Reader the page is already dark, so
+     nothing double-inverts. */
+  color-scheme: dark;
+
+  --bg: #0f0b16;
+  --panel: #17111f;
+  --code: #130e1c;
+  --ink: #ddd4ea;
+  --mut: #877c9c;
+  --acc: #b48cff;
+  --acc-deep: #3b2f6b;
+  --line: rgba(255, 255, 255, 0.09);
+
+  --measure: 68ch;
+  --gap: 1rem;
+  --radius: 4px;
+}
+
+/* Hand-written because Astro's Fonts API emits no unicode-range for local
+   providers, and unicode-range is what keeps emoji-free pages from fetching it. */
+@font-face {
+  font-family: 'Noto Emoji';
+  src: url('/fonts/noto-emoji.woff2') format('woff2');
+  font-display: swap;
+  unicode-range:
+    U+1F000-1FAFF, U+2600-27BF, U+2B00-2BFF, U+FE0F, U+200D, U+1F1E6-1F1FF, U+E0020-E007F;
+}

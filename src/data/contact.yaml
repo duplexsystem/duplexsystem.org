@@ -1,0 +1,13 @@
+# Contact address, XOR'd with a repeating 3-byte key and hex-encoded. Not
+# security: it cracks in 3x256 tries. It only has to beat scrapers, which grep
+# rendered HTML for /\S+@\S+/.
+#
+# `check` is FNV-1a (32-bit) of the plaintext, used to pick the real key out of
+# the few whose output is also address-shaped.
+#
+# Regenerate after changing the address:
+#   python3 -c "e='you@example.com'; k=[116,222,144]
+#   print(bytes(c^k[i%3] for i,c in enumerate(e.encode())).hex())"
+keylen: 3
+cipher: 10abe018bbe807a7e334aee21baaff1ab3f11db2be17b1fd
+check: 1b952f40

@@ -1,0 +1,78 @@
+---
+const nav = [
+  { href: '/blog/', label: 'blog' },
+  { href: '/projects/', label: 'projects' },
+  { href: '/contact/', label: 'contact' },
+  { href: '/search/', label: 'search' },
+];
+const path = Astro.url.pathname;
+// ?url so the mark ships once as a cacheable file rather than inline in every
+// page. See the styles below for why it renders at 32px.
+import markUrl from '../assets/logo/mark-dither.svg?url';
+---
+
+<header class="mast">
+  <a class="mast__wm" href="/">
+    <img
+      class="mast__mark"
+      src={markUrl}
+      width="32"
+      height="32"
+      alt=""
+      loading="eager"
+      decoding="sync"
+    />
+    <span class="mast__word">duplex<span>system</span></span>
+  </a>
+  <nav class="mast__nav" aria-label="Main">
+    {
+      nav.map((item) => (
+        <a href={item.href} aria-current={path.startsWith(item.href) ? 'page' : undefined}>
+          {item.label}
+        </a>
+      ))
+    }
+  </nav>
+</header>
+
+<style>
+  .mast {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    border-bottom: 1px solid var(--line);
+    padding: 0.6rem 0;
+    margin-bottom: 1.2rem;
+  }
+  .mast__wm {
+    display: inline-flex;
+    align-items: center;
+    gap: 11px;
+    font-family: var(--font-departure), ui-monospace, monospace;
+    font-size: 20px;
+    line-height: 1;
+    color: var(--ink);
+    text-decoration: none;
+  }
+  .mast__word > span {
+    color: var(--mut);
+  }
+  /* 32px, not arbitrary: the dither's cell is 2u on a 64u box, so cells land on
+     whole pixels only at multiples of 32. 24px gives 0.75px cells that
+     antialias into the flat tone the dither avoids. */
+  .mast__mark {
+    flex: none;
+  }
+  .mast__nav {
+    font-family: var(--font-departure), ui-monospace, monospace;
+    font-size: 10px;
+  }
+  .mast__nav a {
+    margin-left: 0.75rem;
+  }
+  .mast__nav a[aria-current='page'] {
+    color: var(--ink);
+  }
+</style>

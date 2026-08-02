@@ -1,0 +1,137 @@
+---
+import { Font } from 'astro:assets';
+import { SEO } from 'astro-seo';
+import Masthead from '../components/Masthead.astro';
+import ogDefault from '../assets/og-default.png';
+import '../styles/tokens.css';
+import '../styles/base.css';
+import '../styles/panel.css';
+
+interface Props {
+  title: string;
+  description: string;
+  ownHeading?: boolean;
+  heading?: string;
+  image?: string;
+  imageAlt?: string;
+  ogType?: string;
+  publishedTime?: string;
+  modifiedTime?: string;
+  articleTags?: string[];
+  /** Emits a <base> so relative URLs resolve here when the body is proxied under
+      another host, plus noindex to keep error bodies out of search. */
+  errorPortal?: boolean;
+}
+const {
+  title,
+  description,
+  ownHeading = false,
+  heading,
+  image,
+  imageAlt = 'duplexsystem.org',
+  ogType = 'website',
+  publishedTime,
+  modifiedTime,
+  articleTags,
+  errorPortal = false,
+} = Astro.props;
+
+const canonical = new URL(Astro.url.pathname, Astro.site).href;
+const portalOrigin = import.meta.env.PORTAL_ORIGIN ?? Astro.site;
+const ogImage = image ?? new URL(ogDefault.src, Astro.site).href;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    {errorPortal && <base href={portalOrigin} />}
+    {errorPortal && <meta name="robots" content="noindex" />}
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    {
+      errorPortal ? (
+        <>
+          {/* No SEO component here: its robots meta says index-follow, which
+            would contradict the noindex above. */}
+          <title>{title}</title>
+          <meta name="description" content={description} />
+          <link rel="jslicense" href="/licenses/" />
+          <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+        </>
+      ) : (
+        <SEO
+          title={title}
+          description={description}
+          canonical={canonical}
+          openGraph={{
+            basic: { title, type: ogType, image: ogImage, url: canonical },
+            optional: { siteName: 'duplexsystem', description, locale: 'en_US' },
+            image: { url: ogImage, alt: imageAlt, width: 1200, height: 630, type: 'image/png' },
+            ...(ogType === 'article' && {
+              article: {
+                publishedTime,
+                modifiedTime,
+                authors: ['duplexsystem'],
+                section: 'Blog',
+                tags: articleTags,
+              },
+            }),
+          }}
+          robotsExtras="max-snippet:-1, max-image-preview:large, max-video-preview:-1"
+          twitter={{ card: 'summary_large_image', title, description, image: ogImage, imageAlt }}
+          extend={{
+            meta: [
+              { name: 'theme-color', content: '#b48cff' },
+              { name: 'color-scheme', content: 'dark' },
+            ],
+            link: [
+              {
+                rel: 'alternate',
+                type: 'application/rss+xml',
+                title: 'duplexsystem',
+                href: '/rss.xml',
+              },
+              { rel: 'jslicense', href: '/licenses/' },
+              { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
+            ],
+          }}
+        />
+      )
+    }
+
+    <Font cssVariable="--font-literata" preload={[{ style: 'normal' }]} />
+    <Font cssVariable="--font-departure" preload />
+    <Font cssVariable="--font-jetbrains" />
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+    <div class="shell">
+      <Masthead />
+      <main id="main">
+        {!ownHeading && <h1 class="vh">{heading ?? title}</h1>}
+        <slot />
+      </main>
+      <footer class="foot">
+        <p class="mono mut">
+          <a href="/rss.xml">rss</a> · <a href="/button/">button</a> · <a href="/licenses/"
+            >licenses</a
+          > · <a href="https://github.com/duplexsystem/duplexsystem.org">source</a>
+        </p>
+      </footer>
+    </div>
+    <style is:global>
+      .shell {
+        max-width: 62rem;
+        margin: 0 auto;
+        padding: 1rem 1.1rem 2.5rem;
+      }
+      .foot {
+        margin-top: 2.5rem;
+        padding-top: 1rem;
+        border-top: 1px solid var(--line);
+        font-size: 10px;
+      }
+    </style>
+  </body>
+</html>

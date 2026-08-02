@@ -1,0 +1,25 @@
+.panel {
+  border: 1px solid var(--line);
+  background: var(--panel);
+  border-radius: var(--radius);
+  margin-bottom: var(--gap);
+}
+.panel__title {
+  font-family: var(--font-departure), ui-monospace, monospace;
+  font-size: 10px;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: var(--acc);
+  background: linear-gradient(90deg, rgba(180, 140, 255, 0.15), transparent);
+  border-bottom: 1px solid var(--line);
+  padding: 4px 10px;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+}
+.panel__meta {
+  color: var(--mut);
+}
+.panel__body {
+  padding: 0.7rem 0.85rem;
+}

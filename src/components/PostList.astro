@@ -1,0 +1,46 @@
+---
+import { formatDate, type Post } from '../lib/posts';
+
+interface Props {
+  posts: Post[];
+  showDescription?: boolean;
+}
+const { posts, showDescription = false } = Astro.props;
+---
+
+<ul class="postlist">
+  {
+    posts.map((post) => (
+      <li class="postlist__item">
+        <a href={`/blog/${post.id}/`}>{post.data.title}</a>
+        <div class="postlist__meta mono mut">
+          {formatDate(post.data.pubDate)}
+          {post.data.tags.length > 0 && <> · {post.data.tags.map((t) => `#${t}`).join(' ')}</>}
+        </div>
+        {showDescription && <p class="postlist__desc mut">{post.data.description}</p>}
+      </li>
+    ))
+  }
+</ul>
+
+<style>
+  .postlist {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .postlist__item {
+    padding: 0.45rem 0;
+    border-bottom: 1px dotted var(--line);
+  }
+  .postlist__item:last-child {
+    border-bottom: 0;
+  }
+  .postlist__meta {
+    font-size: 10px;
+  }
+  .postlist__desc {
+    margin: 0.25rem 0 0;
+    font-size: 15px;
+  }
+</style>

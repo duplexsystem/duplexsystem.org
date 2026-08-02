@@ -1,0 +1,6 @@
+code: '400'
+name: Bad Request
+meta: bad request
+message: >-
+  The server cannot or will not process the request due to an apparent client
+  error.

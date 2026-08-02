@@ -1,0 +1,5 @@
+code: '503'
+name: Service Unavailable
+meta: unavailable
+message: >-
+  The server cannot handle the request because it is overloaded or down for maintenance.

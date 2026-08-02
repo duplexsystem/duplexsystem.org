@@ -1,0 +1,89 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Panel from '../components/Panel.astro';
+import PostList from '../components/PostList.astro';
+import ButtonWall from '../components/ButtonWall.astro';
+import { getPublishedPosts, countLabel } from '../lib/posts';
+import { loadButtons } from '../lib/buttons';
+
+const posts = await getPublishedPosts();
+const recent = posts.slice(0, 5);
+const buttons = loadButtons().buttons.filter((b) => !b.own);
+---
+
+<BaseLayout title="duplexsystem" description="Making slow things fast">
+  <div class="cols">
+    <div>
+      <Panel title="whoami" meta="~/">
+        <p class="measure">
+          Hello! I'm Zoë Gidiere, though you probably know me as duplexsystem. This is my site. I do
+          gamedev and hobbyist sysadmin work, and I really like to make slow things go fast. And
+          sometimes I write about it too!
+        </p>
+      </Panel>
+
+      <Panel title="recent writing" meta={countLabel(posts.length, 'post')}>
+        <PostList posts={recent} showDescription />
+        <p class="more"><a href="/blog/">all writing →</a></p>
+      </Panel>
+    </div>
+
+    <aside>
+      <Panel title="elsewhere">
+        <ul class="rail">
+          <li><a href="https://github.com/duplexsystem" rel="me">github</a></li>
+          <li><a href="https://modrinth.com/user/duplexsystem" rel="me">modrinth</a></li>
+          <li><a href="https://ko-fi.com/duplexsystem" rel="me">ko-fi</a></li>
+        </ul>
+        <hr class="rail__break" />
+        <div class="rail__split">
+          {/* Reserved for a second link. */}
+          <span></span>
+          <a href="https://dfsek.com">dfsek →</a>
+        </div>
+      </Panel>
+
+      <Panel title="buttons">
+        <ButtonWall buttons={buttons} linked={false} />
+      </Panel>
+    </aside>
+  </div>
+</BaseLayout>
+
+<style>
+  /* The sidebar sizes to its widest content (the button wall's no-wrap width),
+     capped at 26rem; hand-computed widths kept missing the panel's padding.
+     minmax(0, 1fr) keeps wide code blocks scrolling inside the main column. */
+  .cols {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) fit-content(26rem);
+    gap: var(--gap);
+  }
+  @media (max-width: 46rem) {
+    .cols {
+      grid-template-columns: 1fr;
+    }
+  }
+  .rail {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .rail li {
+    padding: 0.15rem 0;
+  }
+  .rail__break {
+    border: 0;
+    border-top: 1px solid var(--line);
+    margin: 0.5rem 0;
+  }
+  .rail__split {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.15rem 0;
+  }
+  .more {
+    margin: 0.6rem 0 0;
+    font-size: 15px;
+  }
+</style>

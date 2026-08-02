@@ -1,0 +1,21 @@
+# One entry, and only one, must set `own: true`: the site's own 88x31. The
+# build fails if it is missing or duplicated.
+buttons:
+  - name: duplexsystem
+    href: https://duplexsystem.org
+    img: /buttons/duplexsystem.png
+    alt: duplexsystem.org
+    own: true
+  # Self-hosted, not hotlinked: no third-party requests. `href` is the source.
+  - name: they/she pronouns
+    img: /buttons/pronoun-ega-they-she.png
+    alt: 88x31 button reading "they/she"
+  - name: tranarchy
+    img: /buttons/tranarchy.gif
+    alt: 88x31 button reading "tranarchy"
+  - name: queer pride
+    img: /buttons/queerpride.gif
+    alt: 88x31 button reading "queer pride!"
+  - name: non-binary pride
+    img: /buttons/nonbinary.gif
+    alt: 88x31 button reading "non-binary pride!"

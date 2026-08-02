@@ -1,0 +1,100 @@
+---
+import { Image, getImage } from 'astro:assets';
+import BaseLayout from './BaseLayout.astro';
+import { blurhashCss } from '../../scripts/blurhash.mjs';
+import { formatDate, type Post } from '../lib/posts';
+import { readingTime } from '../lib/reading-time';
+
+interface Props {
+  post: Post;
+}
+const { post } = Astro.props;
+const { minutes } = readingTime(post.body ?? '');
+const hasCode = (post.body ?? '').includes('```');
+const hero = post.data.heroImage;
+
+const ogImage = hero
+  ? new URL(
+      (await getImage({ src: hero, width: 1200, height: 630, fit: 'cover', format: 'png' })).src,
+      Astro.site,
+    ).href
+  : undefined;
+
+const heroBlur = hero ? await blurhashCss(hero.fsPath ?? hero.src) : null;
+---
+
+<BaseLayout
+  title={`${post.data.title} · duplexsystem`}
+  description={post.data.description}
+  ownHeading
+  ogType="article"
+  image={ogImage}
+  imageAlt={post.data.heroAlt || post.data.title}
+  publishedTime={post.data.pubDate.toISOString()}
+  modifiedTime={post.data.updatedDate?.toISOString()}
+  articleTags={post.data.tags}
+>
+  <article class="post measure" data-pagefind-body>
+    {
+      hero && (
+        <div class="hero-wrap">
+          {/* Its own layer, not .hero-wrap: blurhash-to-css returns a `filter`,
+            and a filter on the parent would blur the real image too. */}
+          {heroBlur && <div class="hero-blur" style={heroBlur} aria-hidden="true" />}
+          <Image
+            class="post__hero"
+            src={hero}
+            alt={post.data.heroAlt ?? ''}
+            widths={[480, 800, 1200]}
+            sizes="(max-width: 46rem) 100vw, 44rem"
+            format="webp"
+            loading="eager"
+            fetchpriority="high"
+            decoding="sync"
+          />
+          {/* decoding="sync" makes the paint wait for the decode, so a cached
+             hero appears with the page instead of popping in a few frames later. */}
+        </div>
+      )
+    }
+    <h1>{post.data.title}</h1>
+    <div class="post__byline mono mut">
+      {formatDate(post.data.pubDate)} · {minutes} MIN
+      {post.data.updatedDate && <> · UPDATED {formatDate(post.data.updatedDate)}</>}
+    </div>
+    {
+      post.data.tags.length > 0 && (
+        <div class="post__tags">
+          {post.data.tags.map((tag) => (
+            <a class="tag" href={`/tags/${tag}/`}>
+              #{tag}
+            </a>
+          ))}
+        </div>
+      )
+    }
+    <slot />
+  </article>
+  {hasCode && <script src="/js/copy-code.js" defer />}
+</BaseLayout>
+
+<style>
+  .post__byline {
+    font-size: 10px;
+    margin-bottom: 0.75rem;
+  }
+  .post__tags {
+    display: flex;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.5rem;
+  }
+  .tag {
+    font-family: var(--font-departure), ui-monospace, monospace;
+    font-size: 10px;
+    border: 1px solid rgba(180, 140, 255, 0.4);
+    border-radius: 99px;
+    padding: 1px 8px;
+    text-decoration: none;
+  }
+</style>

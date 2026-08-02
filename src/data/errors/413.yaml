@@ -1,0 +1,5 @@
+code: '413'
+name: Content Too Large
+meta: too large
+message: >-
+  The request is larger than the server is willing or able to process.

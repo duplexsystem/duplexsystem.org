@@ -1,3 +1,1 @@
-<!-- Alternative with mitred points. Wider viewBox: the tips sit at x=-4.54 and
-     x=68.54, outside a 0-64 box. Not interchangeable with mark.svg. -->
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="-10 0 84 64" width="84" height="64" role="img" aria-label="duplexsystem"><g fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10"><path d="M42 8 6 26h52"/><path d="M22 56 58 38H6"/></g></svg>
+<svg xmlns="http://www.w3.org/2000/svg" width="84" height="64" aria-label="duplexsystem" role="img" viewBox="-10 0 84 64"><g fill="none" stroke="currentColor" stroke-linecap="butt" stroke-linejoin="miter" stroke-miterlimit="10" stroke-width="5"><path d="M42 8 6 26h52"/><path d="M22 56 58 38H6"/></g></svg>

@@ -1,0 +1,25 @@
+:root {
+  color-scheme: dark;
+
+  --bg: #0f0b16;
+  --panel: #17111f;
+  --code: #130e1c;
+  --ink: #ddd4ea;
+  --mut: #9a90b0;
+  --acc: #b48cff;
+  --acc-deep: #3b2f6b;
+  --line: rgba(255, 255, 255, 0.09);
+  --diff-add: #8fd9a8;
+  --diff-remove: #ff8888;
+  --mono-small: 11px;
+  --measure: 669.5px;
+  --gap: 1rem;
+  --radius: 4px;
+}
+@font-face {
+  font-family: 'Noto Emoji';
+  src: url('../assets/fonts/generated/noto-emoji.woff2') format('woff2');
+  font-display: swap;
+  unicode-range:
+    U+1F000-1FAFF, U+2600-27BF, U+2B00-2BFF, U+FE0F, U+200D, U+1F1E6-1F1FF, U+E0020-E007F;
+}

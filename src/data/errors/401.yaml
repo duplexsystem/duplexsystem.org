@@ -1,0 +1,5 @@
+code: '401'
+name: Unauthorized
+meta: unauthorized
+message: >-
+  The response must include a WWW-Authenticate header field containing a challenge applicable to the requested resource. Whatever that means...

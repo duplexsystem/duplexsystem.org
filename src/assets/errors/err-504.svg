@@ -1,0 +1,94 @@
+<svg class="e504" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"
+     role="img" aria-label="A blocky server rack matching 500, 502 and 503, with a gateway clock whose hand sweeps round and then stops" style="color:var(--acc, #b48cff)">
+  <style>
+    .e504 { fill: currentColor; shape-rendering: crispEdges; }
+
+    /* 8s cycle: three rotations at 2s each, then the hand holds at 12 for 2s. */
+    .e504__led { animation: e504-led 2.4s steps(1, end) infinite; }
+    .e504__h1  { animation: e504-h1  8.0s steps(1, end) infinite; }
+    .e504__h2  { animation: e504-h2  8.0s steps(1, end) infinite; }
+    .e504__h3  { animation: e504-h3  8.0s steps(1, end) infinite; }
+    .e504__h4  { animation: e504-h4  8.0s steps(1, end) infinite; }
+
+    @keyframes e504-led {
+      0%, 45%  { opacity: 1 }
+      45%, 65% { opacity: 0.25 }
+      65%, 100%{ opacity: 1 }
+    }
+
+    @keyframes e504-h1 {
+      0%, 6%   { opacity: 1 }
+      7%, 24%  { opacity: 0 }
+      25%, 31% { opacity: 1 }
+      32%, 49% { opacity: 0 }
+      50%, 56% { opacity: 1 }
+      57%, 74% { opacity: 0 }
+      75%, 100%{ opacity: 1 } /* STOPS and HOLDS pointing UP for 2.0s pause */
+    }
+
+    @keyframes e504-h2 {
+      7%, 12%  { opacity: 1 }
+      32%, 37% { opacity: 1 }
+      57%, 62% { opacity: 1 }
+      0%, 6%, 13%, 31%, 38%, 56%, 63%, 100% { opacity: 0 }
+    }
+
+    @keyframes e504-h3 {
+      13%, 18% { opacity: 1 }
+      38%, 43% { opacity: 1 }
+      63%, 68% { opacity: 1 }
+      0%, 12%, 19%, 37%, 44%, 62%, 69%, 100% { opacity: 0 }
+    }
+
+    @keyframes e504-h4 {
+      19%, 24% { opacity: 1 }
+      44%, 49% { opacity: 1 }
+      69%, 74% { opacity: 1 }
+      0%, 18%, 25%, 43%, 50%, 68%, 75%, 100% { opacity: 0 }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .e504__led   { animation: none; opacity: 1 }
+      .e504__h1    { animation: none; opacity: 1 }
+      .e504__h2,
+      .e504__h3,
+      .e504__h4    { animation: none; opacity: 0 }
+    }
+  </style>
+
+  <g class="e504__rack">
+    <rect x="10" y="10" width="12" height="1"/>
+    <rect x="10" y="11" width="1" height="11"/>
+    <rect x="21" y="11" width="1" height="11"/>
+    <rect x="10" y="14" width="12" height="1"/>
+    <rect x="10" y="18" width="12" height="1"/>
+    <rect x="10" y="22" width="12" height="1"/>
+    <rect x="16" y="12" width="4" height="1"/>
+    <rect x="16" y="16" width="4" height="1"/>
+    <rect x="16" y="20" width="4" height="1"/>
+    <rect x="11" y="23" width="2" height="1"/>
+    <rect x="19" y="23" width="2" height="1"/>
+  </g>
+
+  <g class="e504__led">
+    <rect x="12" y="12" width="1" height="1"/>
+    <rect x="14" y="12" width="1" height="1"/>
+    <rect x="12" y="16" width="1" height="1"/>
+    <rect x="14" y="16" width="1" height="1"/>
+    <rect x="12" y="20" width="1" height="1"/>
+    <rect x="14" y="20" width="1" height="1"/>
+  </g>
+
+  <g class="e504__clock_frame">
+    <rect x="4" y="12" width="3" height="1"/>
+    <rect x="3" y="13" width="1" height="3"/>
+    <rect x="7" y="13" width="1" height="3"/>
+    <rect x="4" y="16" width="3" height="1"/>
+    <rect x="5" y="14" width="1" height="1"/>
+  </g>
+
+  <g class="e504__h1"><rect x="5" y="13" width="1" height="1"/></g>
+  <g class="e504__h2"><rect x="6" y="14" width="1" height="1"/></g>
+  <g class="e504__h3"><rect x="5" y="15" width="1" height="1"/></g>
+  <g class="e504__h4"><rect x="4" y="14" width="1" height="1"/></g>
+</svg>

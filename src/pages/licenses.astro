@@ -1,0 +1,196 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Panel from '../components/Panel.astro';
+
+const REPO = 'https://github.com/duplexsystem/duplexsystem.org';
+const AGPL = 'https://directory.fsf.org/wiki/License:AGPLv3';
+const MIT = 'https://directory.fsf.org/wiki/License:Expat';
+const EMBED_SRC = (pkg) =>
+  `https://github.com/delucis/astro-embed/tree/main/packages/astro-embed-${pkg}`;
+
+const PAGEFIND_VERSION = '1.5.2';
+const KATEX_VERSION = '0.19.0';
+const PAGEFIND_SRC = `https://github.com/CloudCannon/pagefind/archive/refs/tags/v${PAGEFIND_VERSION}.tar.gz`;
+const PAGEFIND_SOURCE_LABEL = `pagefind-${PAGEFIND_VERSION}.tar.gz`;
+
+const OWN = {
+  license: 'AGPL-3.0-or-later',
+  licenseUrl: AGPL,
+  source: REPO,
+  sourceLabel: 'duplexsystem.org',
+};
+const SCRIPTS = [
+  ...[
+    'code-blocks',
+    'search',
+    'crack-email',
+    'post',
+  ].map((name) => ({ file: `/js/${name}.js`, ...OWN })),
+  {
+    file: '/js/lite-youtube.js',
+    license: 'MIT',
+    licenseUrl: MIT,
+    source: EMBED_SRC('youtube'),
+    sourceLabel: 'astro-embed-youtube',
+  },
+  {
+    file: '/js/lite-vimeo.js',
+    license: 'MIT',
+    licenseUrl: MIT,
+    source: EMBED_SRC('vimeo'),
+    sourceLabel: 'astro-embed-vimeo',
+  },
+  {
+    file: '/pagefind/pagefind.js',
+    license: 'MIT',
+    licenseUrl: MIT,
+    source: PAGEFIND_SRC,
+    sourceLabel: PAGEFIND_SOURCE_LABEL,
+  },
+  {
+    file: '/pagefind/pagefind-component-ui.js',
+    license: 'MIT',
+    licenseUrl: MIT,
+    source: PAGEFIND_SRC,
+    sourceLabel: PAGEFIND_SOURCE_LABEL,
+  },
+  {
+    file: '/pagefind/pagefind-worker.js',
+    license: 'MIT',
+    licenseUrl: MIT,
+    source: PAGEFIND_SRC,
+    sourceLabel: PAGEFIND_SOURCE_LABEL,
+  },
+];
+
+const COMPONENTS = [
+  {
+    name: 'Literata',
+    version: '3.103',
+    license: 'OFL-1.1',
+    file: 'Literata-OFL.txt',
+    url: 'https://github.com/googlefonts/literata',
+  },
+  {
+    name: 'Departure Mono',
+    version: '1.500',
+    license: 'MIT',
+    file: 'DepartureMono-MIT.txt',
+    url: 'https://departuremono.com/',
+  },
+  {
+    name: 'JetBrains Mono',
+    version: '2.304',
+    license: 'OFL-1.1',
+    file: 'JetBrainsMono-OFL.txt',
+    url: 'https://github.com/JetBrains/JetBrainsMono',
+  },
+  {
+    name: 'Noto Color Emoji',
+    version: '2.057',
+    license: 'OFL-1.1',
+    file: 'NotoColorEmoji-OFL.txt',
+    url: 'https://github.com/googlefonts/noto-emoji',
+  },
+  {
+    name: 'KaTeX',
+    version: KATEX_VERSION,
+    license: 'MIT',
+    file: 'KaTeX-MIT.txt',
+    url: 'https://katex.org/',
+  },
+  {
+    name: 'Pagefind',
+    version: PAGEFIND_VERSION,
+    license: 'MIT',
+    file: 'Pagefind-MIT.txt',
+    url: 'https://pagefind.app/',
+  },
+];
+
+---
+
+<BaseLayout title="licenses · duplexsystem" description="Licenses.">
+  <Panel title="licenses" meta="~/licenses">
+    <div class="measure">
+      <h2>This site</h2>
+      <p>
+        <a href={REPO}>This site</a> is licensed under the terms of the <a
+          href="/licenses/AGPL-3.0.txt">GNU Affero General Public License, version 3 or later</a
+        >. Some portions may be licensed separately and are described below.
+      </p>
+
+      <h2>Content Licenses</h2>
+      <p>
+        The written content and original images of this site are licensed under the terms of
+        the <a href="/licenses/CC-BY-SA-4.0.txt" rel="license"
+          >Creative Commons Attribution-ShareAlike 4.0 International License</a
+        >.
+      </p>
+      <p>
+        Code snippets in posts are licensed under the terms of the <a
+          href="/licenses/MIT-0.txt">MIT No Attribution License</a
+        >. Code quoted from third parties remains subject to the terms of its original
+        license.
+      </p>
+
+      <h2>JavaScript Licenses</h2>
+      <p>
+        Per the <a href="https://www.gnu.org/licenses/javascript-labels.html"
+          >GNU JavaScript License Web Labels</a
+        > convention, all scripts on this site are appropriately tagged.
+      </p>
+      <table id="jslicense-labels1">
+        <tr><td><b>File</b></td><td><b>License</b></td><td><b>Source</b></td></tr>
+        {
+          SCRIPTS.map((s) => (
+            <tr>
+              <td>
+                <a href={s.file}>{s.file.split('/').pop()}</a>
+              </td>
+              <td>
+                <a href={s.licenseUrl}>{s.license}</a>
+              </td>
+              <td>
+                <a href={s.source}>{s.sourceLabel}</a>
+              </td>
+            </tr>
+          ))
+        }
+      </table>
+
+      <h2>Asset Licenses</h2>
+      <table>
+        <tr><td><b>Asset</b></td><td><b>License</b></td><td><b>Source</b></td></tr>
+        {
+          COMPONENTS.map((c) => (
+            <tr>
+              <td>
+                {c.name} {c.version}
+              </td>
+              <td>
+                <a href={`/licenses/${c.file}`}>{c.license}</a>
+              </td>
+              <td>
+                <a href={c.url}>{c.url.replace(/^https:\/\/|\/$/g, '')}</a>
+              </td>
+            </tr>
+          ))
+        }
+      </table>
+    </div>
+  </Panel>
+</BaseLayout>
+
+<style>
+  table {
+    border-collapse: collapse;
+    margin: 1rem 0;
+    width: 100%;
+  }
+  table :is(td, th) {
+    border: 1px solid var(--line);
+    padding: 0.3rem 0.6rem;
+    text-align: left;
+  }
+</style>

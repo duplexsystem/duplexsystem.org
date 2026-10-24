@@ -1,0 +1,5 @@
+code: '504'
+name: Gateway Timeout
+meta: timeout
+message: >-
+  The server was acting as a gateway or proxy and did not receive a timely response from the upstream server.

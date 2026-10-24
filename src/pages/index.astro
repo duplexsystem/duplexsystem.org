@@ -1,0 +1,103 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Panel from '../components/Panel.astro';
+import PostList from '../components/PostList.astro';
+import ButtonWall from '../components/ButtonWall.astro';
+import { getPublishedPosts, countLabel } from '../lib/posts';
+import { loadButtons } from '../lib/buttons';
+import { SITE, PERSON_ID, personLd } from '../lib/site';
+
+const posts = await getPublishedPosts();
+const recent = posts.slice(0, 5);
+const wall = loadButtons().buttons.filter((b) => !b.own);
+const badges = wall.filter((b) => !b.friend);
+const friends = wall.filter((b) => b.friend);
+
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@graph': [
+    {
+      '@type': 'WebSite',
+      '@id': `${SITE.url}#site`,
+      url: SITE.url,
+      name: SITE.name,
+      description: SITE.description,
+      inLanguage: 'en',
+      publisher: { '@id': PERSON_ID },
+    },
+    personLd(),
+  ],
+};
+---
+
+<BaseLayout title={SITE.name} description={SITE.description} jsonLd={jsonLd} creator>
+  <div class="cols h-card">
+    <data class="u-url u-uid" value={SITE.url} hidden></data>
+    <div>
+      <Panel title="whoami" meta="~/">
+        <p class="measure p-note">
+          Hello! I'm <span class="p-name">{SITE.author}</span>, though you probably know me as{' '}
+          <span class="p-nickname">{SITE.name}</span>. This is my site. I do gamedev and hobbyist
+          sysadmin work, and I really like to make slow things go fast. And sometimes I write about
+          it too!
+        </p>
+      </Panel>
+
+      <Panel title="recent writing" meta={countLabel(posts.length, 'post')}>
+        <PostList posts={recent} showDescription />
+        <p class="more">
+          <a href="/blog/">all writing →</a>
+        </p>
+      </Panel>
+    </div>
+
+    <aside>
+      <Panel title="elsewhere">
+        <ul class="rail">
+          {SITE.elsewhere.map((link) => (
+            <li>
+              <a class="u-url" href={link.href} rel="me">
+                {link.label}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </Panel>
+
+      <Panel title="buttons">
+        <ButtonWall buttons={badges} />
+      </Panel>
+
+      {friends.length > 0 && (
+        <Panel title="friends">
+          <ButtonWall buttons={friends} />
+        </Panel>
+      )}
+    </aside>
+  </div>
+</BaseLayout>
+
+<style>
+  .cols {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) fit-content(26rem);
+    gap: var(--gap);
+  }
+  @media (max-width: 46rem) {
+    .cols {
+      grid-template-columns: 1fr;
+    }
+  }
+  .rail {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  .rail li {
+    padding: 0.15rem 0;
+  }
+  .more {
+    margin: 0.6rem 0 0;
+    font-size: 15px;
+  }
+</style>

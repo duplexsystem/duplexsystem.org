@@ -1,0 +1,21 @@
+---
+import { renderChart } from '../lib/chart.mjs';
+import { captionHtml, supsubHtml } from '../lib/supsub.mjs';
+
+interface Props {
+  spec: Record<string, unknown>;
+  title: string;
+  caption?: string;
+}
+
+const { spec, title, caption } = Astro.props;
+const svg = await renderChart(spec, title);
+---
+
+<figure class="frame chart">
+  <div class="frame__bar">
+    <span class="frame__label" set:html={supsubHtml(title)} />
+  </div>
+  <div class="frame__body" set:html={svg} />
+  {caption && <figcaption set:html={captionHtml(caption)} />}
+</figure>

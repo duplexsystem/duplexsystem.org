@@ -1,0 +1,30 @@
+name: ci
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: system deps (brotli cli, fonttools, C to WebAssembly)
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q brotli clang lld wasi-libc binaryen zopfli libjxl-tools qemu-user-static
+          pip install fonttools brotli
+      - run: npm ci
+      - run: npm run build
+      - run: npx vitest run
+      - run: python3 scripts/test_subset_fonts.py
+      - run: npm run verify:embeds

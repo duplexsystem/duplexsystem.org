@@ -1,0 +1,6 @@
+code: '404'
+name: Not Found
+meta: not found
+message: >-
+  The requested resource could not be found but may be available in the
+  future.

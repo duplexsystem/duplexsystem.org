@@ -1,0 +1,13 @@
+{
+  "departure-mono": " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~·ë’“”…→",
+  "jetbrains-mono": " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~ ×…",
+  "jetbrains-mono-italic": " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~",
+  "KaTeX_Main-Italic": "lz",
+  "KaTeX_Main-Regular": " ()+-./0123456789<=\\^_abcdefghilmnopqrstuxyz{|}  −∣≈≤≫⊕⋅⟺",
+  "KaTeX_Math-Italic": "abdeinxy",
+  "literata-italic-400": " '(),-./12359:BCGHILMOPSTVabcdefghiklmnoprstuvwxy",
+  "literata-roman-400": " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~ë’“”…→",
+  "literata-roman-600": " !\"#$%&'()*+,-./0123456789:;<=>?@ABCDEFGHIJKLMNOPQRSTUVWXYZ[\\]^_`abcdefghijklmnopqrstuvwxyz{|}~ë’“”…→",
+  "literata-roman-700": ".0123456789AFLSceilnorstu",
+  "noto-emoji": "🤠🫈"
+}

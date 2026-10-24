@@ -1,0 +1,54 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Panel from '../components/Panel.astro';
+import ButtonWall from '../components/ButtonWall.astro';
+import { loadButtons } from '../lib/buttons';
+import { codeToHtml } from 'shiki';
+import violetDark from '../../shiki/violet-dark.json' with { type: 'json' };
+import { codeblockHeader } from '../../shiki/codeblock-header.mjs';
+
+const { buttons } = loadButtons();
+
+const own = buttons.find((b) => b.own)!;
+const dataUri = 'data:image/png;base64,__BUTTON_DATA_URI__';
+
+const snippet = [
+  '<a href="https://duplexsystem.org">',
+  `  <img src="${dataUri}"`,
+  `       width="88" height="31" alt="${own.alt ?? own.name}">`,
+  '</a>',
+].join('\n');
+
+const snippetHtml = await codeToHtml(snippet, {
+  lang: 'html',
+  theme: violetDark,
+  meta: { __raw: 'title="button.html"' },
+  transformers: [codeblockHeader()],
+});
+---
+
+<BaseLayout title="button · duplexsystem" description="My button.">
+  <Panel title="button" meta="88x31">
+    <p class="measure">If applicable, please host your own copy.</p>
+    <ButtonWall buttons={buttons.filter((b) => b.own)} />
+    <div class="snippet" set:html={snippetHtml} />
+
+    <p class="measure">
+      My button is also published at{' '}
+      <a href="/.well-known/button"><code>/.well-known/button</code></a>, following{' '}
+      <a href="https://codeberg.org/LunarEclipse/well-known-button">the draft spec</a>.
+    </p>
+  </Panel>
+</BaseLayout>
+
+<script src="/js/code-blocks.js" defer></script>
+
+<style>
+  .snippet :global(pre) {
+    max-width: 100%;
+  }
+  .snippet :global(code) {
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+</style>

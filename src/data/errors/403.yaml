@@ -1,0 +1,5 @@
+code: '403'
+name: Forbidden
+meta: forbidden
+message: >-
+  The request was valid, but the server refuses action. This may be due to you not having permission to a resource or needing an account of some sort, or attempting a prohibited action.

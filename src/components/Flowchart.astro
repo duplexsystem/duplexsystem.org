@@ -1,0 +1,31 @@
+---
+import { parseFlowchart, renderFlowchart, type Flowchart } from '../lib/flowchart';
+import { captionHtml, supsubHtml } from '../lib/supsub.mjs';
+import { linkOf } from '../../shiki/codeblock-header.mjs';
+
+type Props = { title: string; caption?: string; dir?: string } & ({ source: string } | Flowchart);
+
+const { title, caption, dir, ...rest } = Astro.props;
+const dirLink = linkOf(dir);
+const chart: Flowchart = 'source' in rest ? parseFlowchart(rest.source) : (rest as Flowchart);
+const svg = renderFlowchart(chart, title);
+---
+
+<figure class="frame chart flowchart-figure">
+  <div class="frame__bar">
+    <span class="frame__label" set:html={supsubHtml(title)} />
+    {dir && (
+      <span class="frame__meta">
+        {dirLink ? (
+          <a href={dirLink.href} rel="noopener">
+            {dirLink.text}
+          </a>
+        ) : (
+          dir
+        )}
+      </span>
+    )}
+  </div>
+  <div class="frame__body frame__scroll" set:html={svg} />
+  {caption && <figcaption set:html={captionHtml(caption)} />}
+</figure>

@@ -1,0 +1,60 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import Panel from '../../components/Panel.astro';
+
+import { errorEntries } from '../../lib/errors';
+const art = import.meta.glob('../../assets/errors/err-*.svg', {
+  eager: true,
+  query: '?url',
+  import: 'default',
+});
+
+export function getStaticPaths() {
+  return errorEntries.map((entry) => ({ params: { code: entry.code } }));
+}
+
+const { code } = Astro.params;
+const entry = errorEntries.find((d) => d.code === code);
+const artUrl = art[`../../assets/errors/err-${code}.svg`];
+if (!entry || !artUrl) {
+  throw new Error(`error page ${code}: missing ${!entry ? 'data yaml' : 'artwork svg'}`);
+}
+---
+
+<BaseLayout title={`${entry.code} · duplexsystem`} description={entry.name} errorPortal>
+  <Panel title={entry.code} meta={entry.meta}>
+    <div class="lost">
+      <img
+        class="lost__art"
+        src={artUrl}
+        alt=""
+        width="110"
+        height="110"
+        loading="eager"
+        decoding="sync"
+      />
+      <p class="measure">
+        {entry.message} Try the <a href="/blog/">blog</a> or <a href="/search/">search</a>.
+      </p>
+    </div>
+  </Panel>
+</BaseLayout>
+
+<style>
+  .lost {
+    display: flex;
+    gap: 1.4rem;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+  .lost__art {
+    width: 110px;
+    height: auto;
+    flex: none;
+  }
+  @media (max-width: 30rem) {
+    .lost__art {
+      width: 72px;
+    }
+  }
+</style>

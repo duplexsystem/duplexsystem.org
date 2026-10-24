@@ -1,0 +1,46 @@
+---
+import { bundledLanguages, codeToHtml } from 'shiki';
+import violetDark from '../../shiki/violet-dark.json' with { type: 'json' };
+import { codeblockHeader } from '../../shiki/codeblock-header.mjs';
+import { fetchGist } from '../lib/gist.mjs';
+
+interface Props {
+  id: string;
+}
+
+const { id } = Astro.props;
+const gist = await fetchGist(id);
+
+function shikiLang(language: string | null | undefined): string {
+  if (!language) return 'ansi';
+  const lang = language.toLowerCase();
+  return lang in bundledLanguages ? lang : 'ansi';
+}
+
+const metaAttr = (value) => String(value).replace(/"/g, "'");
+
+const files = await Promise.all(
+  Object.values(gist.files).map(async (file) => ({
+    filename: file.filename,
+    html: await codeToHtml(file.content, {
+      lang: shikiLang(file.language),
+      theme: violetDark,
+      meta: {
+        __raw: `title="${metaAttr(file.filename)}" dir="gist · ${metaAttr(file.language ?? 'text')}" showLineNumbers`,
+      },
+      transformers: [codeblockHeader()],
+    }),
+  })),
+);
+---
+
+<div class="gist">
+  {files.map((file) => <Fragment set:html={file.html} />)}
+  <a
+    class="gist-source"
+    href={gist.html_url}
+    target="_blank"
+    rel="noopener noreferrer"
+    title={gist.owner ? `Gist by ${gist.owner}` : undefined}>view on github</a
+  >
+</div>

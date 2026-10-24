@@ -1,0 +1,170 @@
+---
+import { Font, fontData, type CssVariable } from 'astro:assets';
+import { SEO } from 'astro-seo';
+import Masthead from '../components/Masthead.astro';
+import ogDefault from '../assets/og-default.png';
+import '../styles/tokens.css';
+import '../styles/base.css';
+import katexCss from 'katex/dist/katex.min.css?raw';
+import { SITE, jsonLdScript } from '../lib/site';
+import { includeDrafts } from '../lib/drafts';
+import speculationRules from '../lib/speculation-rules.json';
+
+interface Props {
+  title: string;
+  description: string;
+  ownHeading?: boolean;
+  image?: string;
+  imageAlt?: string;
+  ogType?: string;
+  publishedTime?: string;
+  modifiedTime?: string;
+  articleTags?: string[];
+  jsonLd?: object;
+  feeds?: { title: string; href: string }[];
+  errorPortal?: boolean;
+  creator?: boolean;
+}
+const {
+  title,
+  description,
+  ownHeading = false,
+  image,
+  imageAlt = 'duplexsystem.org',
+  ogType = 'website',
+  publishedTime,
+  modifiedTime,
+  articleTags,
+  jsonLd,
+  feeds = [],
+  errorPortal = false,
+  creator = false,
+} = Astro.props;
+
+const canonical = new URL(Astro.url.pathname, Astro.site).href;
+const portalOrigin = import.meta.env.PORTAL_ORIGIN ?? Astro.site;
+const devFontDir = import.meta.env.DEV ? `${process.cwd()}/node_modules/katex/dist/fonts` : '';
+const ogImage = image ?? new URL(ogDefault.src, Astro.site).href;
+
+const facesPerVariant = includeDrafts() ? 1 : 2;
+const corePreloads = (cssVariable: CssVariable, style?: string, weight?: string) =>
+  fontData[cssVariable]
+    .filter(
+      (face, i) =>
+        i % facesPerVariant === 0 &&
+        (!style || face.style === style) &&
+        (!weight || String(face.weight) === weight),
+    )
+    .map((face) => face.src[0].url);
+const fontPreloads = [
+  ...corePreloads('--font-literata', 'normal', '400'),
+  ...corePreloads('--font-departure'),
+];
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    {import.meta.env.DEV && (
+      <style set:html={katexCss.replace(/url\(fonts\//g, 'url(/@fs' + devFontDir + '/')} />
+    )}
+    {errorPortal && <base href={portalOrigin} />}
+    {errorPortal && <meta name="robots" content="noindex" />}
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    {errorPortal ? (
+      <>
+        <title>{title}</title>
+        <meta name="description" content={description} />
+        <link rel="jslicense" href="/licenses/" />
+        <link rel="icon" href="/favicon.ico" sizes="32x32" />
+        <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+      </>
+    ) : (
+      <SEO
+        title={title}
+        description={description}
+        canonical={canonical}
+        openGraph={{
+          basic: { title, type: ogType, image: ogImage, url: canonical },
+          optional: { siteName: 'duplexsystem', description, locale: 'en_US' },
+          image: { url: ogImage, alt: imageAlt, width: 1200, height: 630, type: 'image/png' },
+          ...(ogType === 'article' && {
+            article: {
+              publishedTime,
+              modifiedTime,
+              authors: ['duplexsystem'],
+              section: 'Blog',
+              tags: articleTags,
+            },
+          }),
+        }}
+        robotsExtras="max-snippet:-1, max-image-preview:large, max-video-preview:-1"
+        twitter={{ card: 'summary_large_image', title, description, image: ogImage, imageAlt }}
+        extend={{
+          meta: [
+            // The page background, so mobile browser chrome blends into it.
+            { name: 'theme-color', content: '#0f0b16' },
+            { name: 'color-scheme', content: 'dark' },
+            // Mastodon credits shared links to this account. It shows only
+            // when the account lists this site under author attribution.
+            ...(creator ? [{ name: 'fediverse:creator', content: SITE.fediverse }] : []),
+          ],
+          link: [
+            { rel: 'alternate', type: 'application/rss+xml', title: SITE.name, href: '/rss.xml' },
+            {
+              rel: 'alternate',
+              type: 'application/feed+json',
+              title: SITE.name,
+              href: '/feed.json',
+            },
+            ...feeds.map((f) => ({
+              rel: 'alternate',
+              type: 'application/rss+xml',
+              title: f.title,
+              href: f.href,
+            })),
+            { rel: 'jslicense', href: '/licenses/' },
+            { rel: 'icon', href: '/favicon.ico', sizes: '32x32' },
+            { rel: 'icon', type: 'image/svg+xml', href: '/favicon.svg' },
+            { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' },
+            { rel: 'manifest', href: '/manifest.webmanifest' },
+          ],
+        }}
+      />
+    )}
+
+    {jsonLd && !errorPortal && (
+      <script is:inline type="application/ld+json" set:html={jsonLdScript(jsonLd)} />
+    )}
+    {!errorPortal && (
+      <script is:inline type="speculationrules" set:html={JSON.stringify(speculationRules)} />
+    )}
+    <Font cssVariable="--font-literata" />
+    <Font cssVariable="--font-departure" />
+    <Font cssVariable="--font-jetbrains" />
+    {fontPreloads.map((href) => (
+      <link rel="preload" href={href} as="font" type="font/woff2" crossorigin />
+    ))}
+  </head>
+  <body>
+    <a class="skip-link" href="#main">
+      Skip to content
+    </a>
+    <div class="shell">
+      <Masthead />
+      <main id="main">
+        {!ownHeading && <h1 class="vh">{title}</h1>}
+        <slot />
+      </main>
+      <footer class="foot">
+        <p class="mono mut">
+          <a href="/rss.xml">rss</a> · <a href="/button/">button</a> ·{' '}
+          <a href="/licenses/">licenses</a> ·{' '}
+          <a href="https://github.com/duplexsystem/duplexsystem.org">source</a>
+        </p>
+      </footer>
+    </div>
+  </body>
+</html>

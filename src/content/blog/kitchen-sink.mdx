@@ -1,0 +1,504 @@
+---
+title: Kitchen sink
+description: One page exercising every content feature.
+pubDate: 2026-07-30
+updatedDate: 2026-07-31
+tags: [meta, mdx, test]
+draft: true
+heroImage: ../../assets/kitchen-hero.png
+heroAlt: A dark violet-bordered rectangle reading "kitchen sink hero"
+---
+
+import Panel from '../../components/Panel.astro';
+import Chart from '../../components/Chart.astro';
+// Both are the same component: SocialPost renders every platform. The names
+// matter only to the frame bar, which labels an embed by the component name.
+import BlueskyPost from '../../components/SocialPost.astro';
+import MastodonPost from '../../components/SocialPost.astro';
+
+This post is `draft: true` foreverrrrr. If you're seeing this in production I have messed up 😬, otherwise you can run a dev version of this site that includes this page with `npm run dev`.
+
+![The Orion Nebula: orange and blue gas clouds threaded with dark dust lanes, thousands of stars behind. NASA, ESA and M. Robberto (STScI/ESA)](../../assets/kitchen-large.jpg)
+
+Big image ^
+
+
+## Headings
+
+### An h3 subhead
+
+#### An h4 subhead
+
+##### An h5 subhead
+
+###### An h6 subhead
+
+## Zoë
+
+## Inline formatting
+
+**Bold**, *italic*, ***bold italic***, ~~strikethrough~~, and `inline code` blah blah blah
+blah
+
+## Links
+
+blah [Astro's documentation](https://docs.astro.build/en/getting-started/), blah https://developer.mozilla.org/en-US/docs/Web/JavaScript blah [Hello world](/blog/hello-world/).
+
+## Lists
+
+An unordered list:
+
+- thing 1
+- thing 2
+- thing -7 william
+
+An ordered list:
+
+1. the thing
+2. the thing jr
+3. the thing jr^2
+
+A nested list, mixing both kinds:
+
+- Build pipeline
+  1. Astro compiles MDX
+  2. Shiki highlights the code blocks
+  3. sharp converts images to WebP
+- Verification
+  - production build gates
+  - dev-server checks
+
+A task list:
+
+- [x] learn how to say "Pneumonoultramicroscopicsilicovolcanoconiosis"
+- [x] be gay do crime
+- [ ] world domination
+
+
+## Blockquotes
+
+> goober 1
+>
+> > goober, goober
+
+## Callouts
+
+> [!NOTE]
+> The assembly listings are from gcc 16.2.1 and clang 22.1.8, at `-O2 -march=x86-64-v3`.
+
+> [!TIP] Try it
+> Every block with a run bar runs in your browser.
+>
+> Change the argument and step through it.
+
+> [!WARNING]
+> `__builtin_clzll(0)` is undefined in C.
+
+> [!CAUTION]
+> This one is red.
+
+## A table with alignment
+
+| Feature      |  Format  | Notes             |
+| :----------- | :------: | ----------------: |
+| she         |   WebP   |     till I goob |
+| goober   |   WebP   |    yeah |
+| on my goob |   WebP   |   woag |
+
+## A wide table
+
+Wide enough that it must scroll inside its own frame instead of stretching
+the page:
+
+| Font | Weight | Style | Format | Subset | kB | Preload | Fallback |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Literata | 200-900 | normal | woff2 | latin | 46.0 | yes | Georgia |
+| Literata | 200-900 | italic | woff2 | latin | 47.2 | no | Georgia |
+| Departure Mono | 400 | normal | woff2 | latin | 22.0 | yes | ui-monospace |
+| JetBrains Mono | 400 | normal | woff2 | latin | 23.1 | yes | ui-monospace |
+| JetBrains Mono | 700 | normal | woff2 | latin | 23.8 | no | ui-monospace |
+| Noto Emoji | 400 | normal | woff2 | emoji | 5.8 | no | system emoji |
+
+---
+
+## A normal body image
+
+![A dark placeholder panel reading "body image"](../../assets/kitchen-body.png)
+
+## An animated body image
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+
+![Three color frames, violet, near-black and gray, looping forever](../../assets/kitchen-anim.gif)
+
+## Charts
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+
+<Chart
+  title="page weight by asset"
+  caption="Worst-case post page, after subsetting and brotli."
+  spec={{
+    data: { values: [
+      { part: 'fonts', kb: 139 },
+      { part: 'html', kb: 12 },
+      { part: 'css', kb: 5 },
+      { part: 'js', kb: 2 },
+    ] },
+    mark: 'bar',
+    height: 160,
+    encoding: {
+      x: { field: 'part', type: 'nominal', axis: { title: null, labelAngle: 0 } },
+      y: { field: 'kb', type: 'quantitative', axis: { title: 'kB' } },
+    },
+  }}
+/>
+
+Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.
+
+<Chart
+  title="build time by task"
+  caption="Wall-clock time for `npm run build`, tracked release to release."
+  spec={{
+    data: { values: [
+      { task: 18, seconds: 5.2 },
+      { task: 19, seconds: 5.6 },
+      { task: 20, seconds: 6.9 },
+      { task: 21, seconds: 7.4 },
+      { task: 22, seconds: 8.1 },
+      { task: 23, seconds: 9.0 },
+      { task: 24, seconds: 9.8 },
+    ] },
+    mark: { type: 'line', point: true },
+    height: 160,
+    encoding: {
+      x: { field: 'task', type: 'quantitative', axis: { title: 'task', format: 'd' } },
+      y: { field: 'seconds', type: 'quantitative', axis: { title: 'seconds' } },
+    },
+  }}
+/>
+
+## Emoji
+
+A crab 🦀, a rocket 🚀, a coffee ☕, and a recent addition to prove the emoji
+subset actually picks it up: 🫈. 🏳️‍⚧️
+
+## Code, every form the site supports
+
+Plain, no meta:
+
+```json
+{ "name": "kitchen-sink", "draft": true, "tags": ["meta", "mdx", "test"] }
+```
+
+`title=` only:
+
+```bash title="deploy.sh"
+#!/usr/bin/env bash
+set -euo pipefail
+rsync -az --delete dist/ duplexsystem.org:/var/www/duplexsystem.org/
+echo "deployed $(date -u +%FT%TZ)"
+```
+
+`title=` + `dir=`:
+
+```rust title="lib.rs" dir="~/src/kitchen"
+pub fn fibonacci(n: u64) -> u64 {
+    match n {
+        0 => 0,
+        1 => 1,
+        _ => fibonacci(n - 1) + fibonacci(n - 2),
+    }
+}
+```
+
+`showLineNumbers` only, and long enough to check the copy button sits at the
+bottom of a tall block rather than floating mid-page:
+
+```python showLineNumbers
+def quicksort(items):
+    if len(items) <= 1:
+        return items
+    pivot = items[len(items) // 2]
+    left = [x for x in items if x < pivot]
+    middle = [x for x in items if x == pivot]
+    right = [x for x in items if x > pivot]
+    return quicksort(left) + middle + quicksort(right)
+
+
+def merge_sort(items):
+    if len(items) <= 1:
+        return items
+    mid = len(items) // 2
+    left = merge_sort(items[:mid])
+    right = merge_sort(items[mid:])
+    return _merge(left, right)
+
+
+def _merge(left, right):
+    result = []
+    i = j = 0
+    while i < len(left) and j < len(right):
+        if left[i] <= right[j]:
+            result.append(left[i])
+            i += 1
+        else:
+            result.append(right[j])
+            j += 1
+    result.extend(left[i:])
+    result.extend(right[j:])
+    return result
+
+
+if __name__ == "__main__":
+    data = [5, 2, 9, 1, 5, 6, 3, 8, 4, 7]
+    print(quicksort(data))
+    print(merge_sort(data))
+```
+
+All three together (`title=`, `dir=`, and `showLineNumbers`) with one very
+long line to check horizontal scrolling:
+
+```ts title="config.ts" dir="~/src" showLineNumbers
+export const CONFIG = { site: "duplexsystem.org", note: "this single line is deliberately long enough that it must scroll horizontally inside the code block instead of wrapping, because pre-wrap is not how this site renders code" };
+```
+
+`nginx`, to round out the language list:
+
+```nginx title="duplexsystem.org.conf"
+server {
+    listen 443 ssl http2;
+    server_name duplexsystem.org;
+    root /var/www/duplexsystem.org;
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+}
+```
+
+A diff:
+
+```c showLineNumbers title="ilog10.c"
+#define _GNU_SOURCE // [!code ++]
+#include <math.h>
+#include <stdint.h>
+
+uint64_t ilog10(uint64_t x)
+{
+    return (63 - __builtin_clzll(x)) * 1233 >> 12; // [!code --]
+    uint64_t estimate = (63 - __builtin_clzll(x)) * 1233 >> 12; // [!code ++]
+    return estimate + (x >= exp10(estimate + 1)); // [!code ++]
+}
+```
+
+Highlighted lines, from the meta and from a comment, in a runnable block whose removed line does not run:
+
+```c showLineNumbers {3} run="ilog10(999)"
+#include <stdint.h>
+
+uint64_t ilog10(uint64_t x)
+{
+    uint64_t n = 0; // [!code highlight]
+    while (x >= 10) { // [!code --]
+    while (x > 9) { // [!code ++]
+        x /= 10;
+        n++;
+    }
+    return n;
+}
+```
+
+## Every embed the integration supports
+
+YouTube:
+
+https://www.youtube.com/watch?v=dQw4w9WgXcQ
+
+Vimeo:
+
+https://vimeo.com/22439234
+
+Bluesky:
+
+<BlueskyPost id="https://bsky.app/profile/bsky.app/post/3mqafridzgk2e" title="on search improvements" />
+
+GitHub Gist:
+
+https://gist.github.com/octocat/6cad326836d38bd3a7ae
+
+Mastodon:
+
+<MastodonPost id="https://mastodon.social/@Mastodon/116967892835165166" title="server spotlight" />
+
+Twitter/X:
+
+https://x.com/jack/status/20
+
+A generic link, for anything with no dedicated embed:
+
+https://astro.build/
+
+## MDX itself
+
+A JSX expression, evaluated inline: two to the tenth power is {Math.pow(2, 10)}.
+
+A real component usage, imported at the top of this file:
+
+<Panel title="Build order" meta="load-bearing">
+  `unified()` has to run before the integration order `[sitemap(), embeds(),
+  mdx()]`. Reorder either one and embeds silently stop working.
+</Panel>
+
+{/* Line-number overflow fixture: 120 lines forces a 3-digit gutter, so the
+    9-to-10 and 99-to-100 alignment regressions stay visible here. */}
+
+```python title="wide-gutter.py" showLineNumbers
+x1 = 1
+x2 = 2
+x3 = 3
+x4 = 4
+x5 = 5
+x6 = 6
+x7 = 7
+x8 = 8
+x9 = 9
+x10 = 10
+x11 = 11
+x12 = 12
+x13 = 13
+x14 = 14
+x15 = 15
+x16 = 16
+x17 = 17
+x18 = 18
+x19 = 19
+x20 = 20
+x21 = 21
+x22 = 22
+x23 = 23
+x24 = 24
+x25 = 25
+x26 = 26
+x27 = 27
+x28 = 28
+x29 = 29
+x30 = 30
+x31 = 31
+x32 = 32
+x33 = 33
+x34 = 34
+x35 = 35
+x36 = 36
+x37 = 37
+x38 = 38
+x39 = 39
+x40 = 40
+x41 = 41
+x42 = 42
+x43 = 43
+x44 = 44
+x45 = 45
+x46 = 46
+x47 = 47
+x48 = 48
+x49 = 49
+x50 = 50
+x51 = 51
+x52 = 52
+x53 = 53
+x54 = 54
+x55 = 55
+x56 = 56
+x57 = 57
+x58 = 58
+x59 = 59
+x60 = 60
+x61 = 61
+x62 = 62
+x63 = 63
+x64 = 64
+x65 = 65
+x66 = 66
+x67 = 67
+x68 = 68
+x69 = 69
+x70 = 70
+x71 = 71
+x72 = 72
+x73 = 73
+x74 = 74
+x75 = 75
+x76 = 76
+x77 = 77
+x78 = 78
+x79 = 79
+x80 = 80
+x81 = 81
+x82 = 82
+x83 = 83
+x84 = 84
+x85 = 85
+x86 = 86
+x87 = 87
+x88 = 88
+x89 = 89
+x90 = 90
+x91 = 91
+x92 = 92
+x93 = 93
+x94 = 94
+x95 = 95
+x96 = 96
+x97 = 97
+x98 = 98
+x99 = 99
+x100 = 100
+x101 = 101
+x102 = 102
+x103 = 103
+x104 = 104
+x105 = 105
+x106 = 106
+x107 = 107
+x108 = 108
+x109 = 109
+x110 = 110
+x111 = 111
+x112 = 112
+x113 = 113
+x114 = 114
+x115 = 115
+x116 = 116
+x117 = 117
+x118 = 118
+x119 = 119
+x120 = 120
+```
+
+## Math
+
+Inline math sits in the run of text: the Euler identity $e^{i\pi} + 1 = 0$, a
+subscript like $a_{n+1}$, and a fraction $\tfrac{3}{4}$ all stay on the line.
+
+Display math gets its own block:
+
+$$
+\zeta(s) = \sum_{n=1}^{\infty} \frac{1}{n^{s}} = \prod_{p \text{ prime}} \frac{1}{1 - p^{-s}}
+$$
+
+$$
+\begin{aligned}
+  \nabla \cdot \mathbf{E} &= \frac{\rho}{\varepsilon_0} &
+  \nabla \cdot \mathbf{B} &= 0 \\
+  \nabla \times \mathbf{E} &= -\frac{\partial \mathbf{B}}{\partial t} &
+  \nabla \times \mathbf{B} &= \mu_0\left(\mathbf{J} + \varepsilon_0 \frac{\partial \mathbf{E}}{\partial t}\right)
+\end{aligned}
+$$
+
+A wide one, to check that it scrolls inside its own box rather than widening
+the page:
+
+$$
+\underbrace{a_1 + a_2 + a_3 + a_4 + a_5 + a_6 + a_7 + a_8 + a_9 + a_{10} + a_{11} + a_{12} + a_{13} + a_{14} + a_{15}}_{\text{fifteen terms}} = \sum_{k=1}^{15} a_k
+$$

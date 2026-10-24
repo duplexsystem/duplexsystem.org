@@ -1,0 +1,31 @@
+---
+import BaseLayout from '../../../layouts/BaseLayout.astro';
+import Panel from '../../../components/Panel.astro';
+import PostList from '../../../components/PostList.astro';
+import { tagStaticPaths, countLabel } from '../../../lib/posts';
+
+export const getStaticPaths = tagStaticPaths;
+
+const { tag, posts } = Astro.props;
+const feed = `/tags/${tag}/rss.xml`;
+---
+
+<BaseLayout
+  title={`#${tag} · duplexsystem`}
+  description={`Writing tagged ${tag}.`}
+  feeds={[{ title: `duplexsystem · #${tag}`, href: feed }]}
+>
+  <Panel title={`tagged #${tag}`} meta={countLabel(posts.length, 'post')}>
+    <PostList posts={posts} showDescription />
+    <p class="more mono mut">
+      <a href={feed}>rss for #{tag}</a>
+    </p>
+  </Panel>
+</BaseLayout>
+
+<style>
+  .more {
+    font-size: var(--mono-small);
+    margin: 0.6rem 0 0;
+  }
+</style>

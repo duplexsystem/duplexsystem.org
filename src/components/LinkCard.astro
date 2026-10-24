@@ -1,0 +1,32 @@
+---
+import SocialCard from './SocialCard.astro';
+import { parseOpenGraph } from '../../node_modules/@astro-community/astro-embed-link-preview/lib.ts';
+
+interface Props {
+  id: string;
+}
+
+const { id } = Astro.props;
+const og = await parseOpenGraph(id);
+
+let domain = '';
+try {
+  domain = new URL(og?.url ?? id).hostname.replace(/^www\./, '');
+} catch {
+  domain = id;
+}
+---
+
+{
+  og && (
+    <SocialCard
+      standalone
+      url={og.url ?? id}
+      image={og.image}
+      imageAlt={og.imageAlt}
+      provider={domain}
+      title={og.title}
+      description={og.description}
+    />
+  )
+}

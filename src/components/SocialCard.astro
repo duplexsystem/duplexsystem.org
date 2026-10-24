@@ -1,0 +1,23 @@
+---
+interface Props {
+  url: string;
+  image?: string | null;
+  imageAlt?: string;
+  provider?: string;
+  title?: string;
+  description?: string;
+  standalone?: boolean;
+}
+const { url, image, imageAlt = '', provider, title, description, standalone = false } = Astro.props;
+---
+
+<a class:list={['social__card', { 'social__card--standalone': standalone }]} href={url}>
+  {image && (
+    <img class="social__card-img" src={image} alt={imageAlt} loading="lazy" decoding="async" />
+  )}
+  <span class="social__card-text">
+    {provider && <span class="social__card-provider">{provider}</span>}
+    {title && <span class="social__card-title">{title}</span>}
+    {description && <span class="social__card-desc">{description}</span>}
+  </span>
+</a>

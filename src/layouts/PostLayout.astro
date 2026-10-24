@@ -1,0 +1,258 @@
+---
+import { Image, getImage } from 'astro:assets';
+import type { MarkdownHeading } from 'astro';
+import BaseLayout from './BaseLayout.astro';
+import { placeholderStyle } from '../../scripts/placeholder.mjs';
+import { formatDate, isoDate, postUpdated, type Post } from '../lib/posts';
+import { hasCodeBlock } from '../lib/code-fences';
+import { readingTime } from '../lib/reading-time';
+import { SITE, personLd } from '../lib/site';
+import ogDefault from '../assets/og-default.png';
+
+interface Props {
+  post: Post;
+  headings?: MarkdownHeading[];
+}
+const { post, headings = [] } = Astro.props;
+
+const sections = headings
+  .filter((h) => (h.depth === 2 || h.depth === 3) && h.slug !== 'footnote-label')
+  .reduce<{ slug: string; text: string; children: MarkdownHeading[] }[]>((acc, h) => {
+    if (h.depth === 2) acc.push({ slug: h.slug, text: h.text, children: [] });
+    else acc.at(-1)?.children.push(h);
+    return acc;
+  }, []);
+const showToc = sections.length >= 3;
+const { minutes } = readingTime(post.body ?? '');
+const hasCode = hasCodeBlock(post.body ?? '');
+const hasRunnable = /^\s*```(c|asm|arm64)\b[^\n]*\brun="/m.test(post.body ?? '');
+const hasNotes = /^\[\^[^\]]+\]:/m.test(post.body ?? '');
+const hero = post.data.heroImage;
+
+const cards = import.meta.glob<{ default: ImageMetadata }>('../assets/og/generated/*.png', {
+  eager: true,
+});
+const card = cards[`../assets/og/generated/${post.id}.png`]?.default;
+const ogImage = hero
+  ? new URL(
+      (await getImage({ src: hero, width: 1200, height: 630, fit: 'cover', format: 'png' })).src,
+      Astro.site,
+    ).href
+  : card
+    ? new URL(card.src, Astro.site).href
+    : undefined;
+
+const heroBlur = hero ? await placeholderStyle(hero.fsPath ?? hero.src) : null;
+
+const url = new URL(Astro.url.pathname, Astro.site).href;
+const { pubDate } = post.data;
+const updatedDate = postUpdated(post);
+const jsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'BlogPosting',
+  '@id': `${url}#post`,
+  mainEntityOfPage: url,
+  url,
+  headline: post.data.title,
+  description: post.data.description,
+  datePublished: isoDate(pubDate),
+  dateModified: isoDate(updatedDate ?? pubDate),
+  image: ogImage ?? new URL(ogDefault.src, Astro.site).href,
+  keywords: post.data.tags,
+  inLanguage: 'en',
+  author: personLd(),
+  license: SITE.contentLicense,
+  isPartOf: { '@id': `${SITE.url}#site` },
+};
+---
+
+<BaseLayout
+  title={`${post.data.title} · duplexsystem`}
+  description={post.data.description}
+  ownHeading
+  ogType="article"
+  image={ogImage}
+  imageAlt={post.data.heroAlt || post.data.title}
+  publishedTime={post.data.pubDate.toISOString()}
+  modifiedTime={updatedDate?.toISOString()}
+  articleTags={post.data.tags}
+  jsonLd={jsonLd}
+  creator
+>
+  <article class="post measure h-entry" data-pagefind-body>
+    <data class="u-url u-uid" value={url} hidden></data>
+    <span class="p-author h-card" hidden data-pagefind-ignore>
+      <a class="u-url p-name" href={SITE.url}>
+        {SITE.author}
+      </a>
+    </span>
+    {hero && (
+      <div class="hero-wrap">
+        {heroBlur && <div class="hero-blur" style={heroBlur} aria-hidden="true" />}
+        <Image
+          class="post__hero"
+          src={hero}
+          alt={post.data.heroAlt ?? ''}
+          widths={[480, 800, 1200]}
+          sizes="(max-width: 46rem) 100vw, 44rem"
+          format="webp"
+          loading="eager"
+          fetchpriority="high"
+          decoding="sync"
+        />
+      </div>
+    )}
+    <header class="post__window">
+      <div class="post__byline mono" data-pagefind-ignore data-minutes={minutes}>
+        <time class="dt-published" datetime={isoDate(pubDate)}>
+          {formatDate(pubDate)}
+        </time>
+        {updatedDate && (
+          <>
+            {' '}
+            · UPDATED{' '}
+            <time class="dt-updated" datetime={isoDate(updatedDate)}>
+              {formatDate(updatedDate)}
+            </time>
+          </>
+        )}{' '}
+        · {minutes} MIN
+      </div>
+      <div class="post__winbody">
+        <h1 class="p-name" data-pagefind-meta="title" data-pagefind-ignore>{post.data.title}</h1>
+        {post.data.tags.length > 0 && (
+          <div class="post__tags" data-pagefind-ignore>
+            {post.data.tags.map((tag) => (
+              <a class="tag" href={`/tags/${tag}/`}>
+                #{tag}
+              </a>
+            ))}
+          </div>
+        )}
+        {showToc && (
+          <details class="toc" data-pagefind-ignore>
+            <summary class="toc__label">
+              <span class="toc__btn" aria-hidden="true" />
+              Contents <span class="toc__count">{sections.length}</span>
+            </summary>
+            <div class="toc__window">
+              <div class="toc__winbar" />
+              <ol>
+                {sections.map((s) => (
+                  <li>
+                    <a href={`#${s.slug}`}>{s.text}</a>
+                    {s.children.length > 0 && (
+                      <ol>
+                        {s.children.map((c) => (
+                          <li>
+                            <a href={`#${c.slug}`}>{c.text}</a>
+                          </li>
+                        ))}
+                      </ol>
+                    )}
+                  </li>
+                ))}
+              </ol>
+            </div>
+          </details>
+        )}
+      </div>
+    </header>
+    <div class="e-content">
+      <slot />
+    </div>
+    {post.data.tags.length > 0 && (
+      <p hidden>Tagged {post.data.tags.map((t) => `#${t}`).join(' ')}.</p>
+    )}
+  </article>
+  {hasCode && <script src="/js/code-blocks.js" defer />}
+  {(showToc || hasNotes) && <script src="/js/post.js" defer />}
+</BaseLayout>
+
+<style>
+  .post {
+    isolation: isolate;
+  }
+  .post__window {
+    --win-out: clamp(
+      0px,
+      round(down, calc(max(0px, (100vw - 62rem) / 2) + 18px - 8px), 1px),
+      17px
+    );
+    position: relative;
+    margin: 0 0 8px;
+  }
+  .post__window::before,
+  .post__window::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: calc(-1 * var(--win-out));
+    width: round(down, calc(100% + 2 * var(--win-out)), 2px);
+    bottom: -160px;
+    z-index: -1;
+  }
+  .post__window::before {
+    background: var(--panel);
+    mask:
+      linear-gradient(#000 0 0) top / 100% calc(100% - 128px) no-repeat,
+      url('../assets/icons/generated/dither-fade.svg') bottom / 8px 128px repeat-x;
+  }
+  .post__window::after {
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-bottom: 0;
+    border-radius: var(--radius) var(--radius) 0 0;
+    mask:
+      linear-gradient(#000 0 0) top / 100% calc(100% - 128px) no-repeat,
+      url('../assets/icons/generated/dither-edge.svg') left bottom / 2px 128px no-repeat,
+      url('../assets/icons/generated/dither-edge.svg') right bottom / 2px 128px no-repeat;
+  }
+
+  .post__byline {
+    box-sizing: border-box;
+    width: round(down, calc(100% + 2 * var(--win-out)), 2px);
+    margin: 0 0 0 calc(-1 * var(--win-out));
+    padding: 5px var(--win-out);
+    font-size: var(--mono-small);
+    line-height: 18px;
+    letter-spacing: 0.13em;
+    color: var(--acc);
+    background: linear-gradient(90deg, rgba(180, 140, 255, 0.15), transparent);
+    border: 0;
+    box-shadow:
+      inset 1px 0 0 rgba(255, 255, 255, 0.14),
+      inset -1px 0 0 rgba(255, 255, 255, 0.14),
+      inset 0 1px 0 rgba(255, 255, 255, 0.14),
+      inset 0 -1px 0 var(--line);
+    border-radius: var(--radius) var(--radius) 0 0;
+  }
+  .post__winbody {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 20px 0 8px;
+  }
+  .post__winbody h1 {
+    margin: 0 0 4px;
+  }
+  .post__tags {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .tag {
+    font-family: var(--font-departure), ui-monospace, monospace;
+    font-size: var(--mono-small);
+    line-height: 18px;
+    padding: 1px 8px;
+    color: var(--acc);
+    background: var(--code);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    border-radius: var(--radius);
+    text-decoration: none;
+  }
+  .tag:hover,
+  .tag:focus-visible {
+    border-color: var(--acc);
+  }
+</style>

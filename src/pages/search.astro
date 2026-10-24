@@ -1,0 +1,340 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import emojiData from 'unicode-emoji-json';
+
+const sources = import.meta.glob('../content/blog/**/*.mdx', {
+  query: '?raw',
+  import: 'default',
+  eager: true,
+}) as Record<string, string>;
+
+const corpus = Object.values(sources).join('\n');
+const emojiNames = Object.fromEntries(
+  Object.keys(emojiData)
+    .sort((a, b) => b.length - a.length)
+    .filter((e) => corpus.includes(e))
+    .map((e) => [e, emojiData[e].name]),
+);
+---
+
+<BaseLayout title="search · duplexsystem" description="Search this site.">
+  <div class="pfwrap">
+    <div class="pfbox">
+      <pagefind-input instance="site" placeholder="Search"></pagefind-input>
+      <kbd class="pfkey" aria-hidden="true">
+        /
+      </kbd>
+    </div>
+    <section class="panel pfresults">
+      <header class="panel__title">
+        <pagefind-summary instance="site"></pagefind-summary>
+      </header>
+      <div class="panel__body">
+        <pagefind-results instance="site"></pagefind-results>
+      </div>
+    </section>
+    <pagefind-config instance="site"></pagefind-config>
+  </div>
+  <noscript>
+    <p class="mut">
+      Search needs JavaScript, try the <a href="/blog/">full writings list</a> or{' '}
+      <a href="/tags/">tags</a> instead.
+    </p>
+  </noscript>
+  <script
+    is:inline
+    type="application/json"
+    id="emoji-names"
+    set:html={JSON.stringify(emojiNames)}
+  />
+</BaseLayout>
+
+<link rel="stylesheet" href="/pagefind/pagefind-component-ui.css" />
+<script type="module" src="/pagefind/pagefind-component-ui.js"></script>
+<script src="/js/search.js" defer></script>
+
+<style is:global>
+  .pfwrap {
+    --pf-background: var(--panel);
+    --pf-text: var(--ink);
+    --pf-text-secondary: var(--mut);
+    --pf-text-muted: var(--mut);
+    --pf-border: var(--line);
+    --pf-border-focus: var(--acc);
+    --pf-border-radius: var(--radius);
+    --pf-outline-focus: var(--acc);
+    --pf-hover: rgba(180, 140, 255, 0.12);
+    --pf-mark: var(--acc);
+    --pf-font: var(--font-literata), 'Noto Emoji', Georgia, serif;
+    --pf-modal-backdrop: rgba(15, 11, 22, 0.72);
+  }
+  .pfwrap pagefind-input {
+    --pf-font: var(--font-departure), ui-monospace, monospace;
+    --pf-input-font-size: 22px;
+    --pf-input-height: 40px;
+    --pf-icon-search: url('../assets/icons/generated/search.svg');
+  }
+  .pfwrap .pf-input {
+    background: var(--panel) !important;
+    border: 1px solid var(--line) !important;
+    border-radius: var(--radius) !important;
+    padding-inline: 37px 52px !important;
+    transition: border-color 0.12s ease;
+  }
+  .pfwrap .pf-input:focus-visible {
+    border-color: var(--acc) !important;
+    box-shadow: none !important;
+  }
+  .pfwrap .pf-input-wrapper:has(.pf-input-clear:not([data-pf-suppressed])) .pf-input {
+    padding-inline-end: 72px !important;
+  }
+  .pfwrap .pf-input-wrapper::before {
+    background-color: var(--acc) !important;
+    width: 16px !important;
+    height: 16px !important;
+    top: 12px !important;
+    inset-inline-start: 14px !important;
+  }
+  @media (scripting: enabled) {
+    .pfwrap pagefind-input:not(:defined) {
+      display: block;
+      position: relative;
+      box-sizing: border-box;
+      height: 40px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+    }
+    .pfwrap pagefind-input:not(:defined)::before {
+      content: '';
+      position: absolute;
+      top: 11px;
+      inset-inline-start: 13px;
+      width: 16px;
+      height: 16px;
+      background-color: var(--acc);
+      mask: var(--pf-icon-search) 0 0 / 100% no-repeat;
+    }
+    .pfwrap pagefind-input:not(:defined)::after {
+      content: attr(placeholder);
+      position: absolute;
+      inset: 0 0 0 37px;
+      font-family: var(--font-departure), ui-monospace, monospace;
+      font-size: 22px;
+      line-height: 38px;
+      color: var(--mut);
+    }
+    .pfbox:has(pagefind-input:not(:defined)) .pfkey {
+      display: block;
+    }
+  }
+  .pfbox {
+    position: relative;
+  }
+  .pfkey {
+    display: none;
+    position: absolute;
+    top: 9px;
+    right: 10px;
+    font-family: var(--font-departure), ui-monospace, monospace;
+    font-size: var(--mono-small);
+    line-height: 1;
+    padding: 4px 7px;
+    color: var(--mut);
+    background: var(--bg);
+    border: 1px solid var(--line);
+    border-radius: 3px;
+    pointer-events: none;
+  }
+  .pfbox:has(.pf-input:placeholder-shown):not(:focus-within) .pfkey {
+    display: block;
+  }
+  .pfwrap .pf-input-clear {
+    font-family: var(--font-departure), ui-monospace, monospace !important;
+    font-size: var(--mono-small) !important;
+    letter-spacing: 0.13em !important;
+    text-transform: uppercase !important;
+  }
+  .pfresults {
+    margin-top: var(--gap);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .pfresults {
+      transition:
+        opacity 0.18s ease-out,
+        translate 0.18s ease-out;
+    }
+    .pfresults[data-closing] {
+      opacity: 0;
+      translate: 0 -4px;
+      transition-timing-function: ease-in;
+    }
+    @starting-style {
+      .pfresults {
+        opacity: 0;
+        translate: 0 -4px;
+      }
+    }
+  }
+  .pfresults:not(:has(.pf-summary:not(:empty))) {
+    display: none;
+  }
+  .pfresults:not(:has(.pf-result:not([aria-hidden='true']), .pf-skeleton)) .panel__title {
+    border-bottom: 0;
+  }
+  .pfresults:not(:has(.pf-result:not([aria-hidden='true']), .pf-skeleton)) .panel__body {
+    display: none;
+  }
+  .pfresults .panel__body {
+    position: relative;
+  }
+  .pfwrap .pf-results:not(.pf-held):is([aria-busy='true'], :has(.pf-skeleton)),
+  .pfresults[data-holding] .pf-results:not(.pf-held) {
+    position: absolute !important;
+    inset: 0 0 auto;
+    visibility: hidden !important;
+  }
+  .pfresults {
+    view-transition-name: pf-results;
+  }
+  ::view-transition-group(pf-results) {
+    animation-duration: 0.18s;
+    animation-timing-function: ease-out;
+    overflow: clip;
+  }
+  ::view-transition-old(pf-results),
+  ::view-transition-new(pf-results) {
+    animation-duration: 0.18s;
+  }
+  @supports (-moz-appearance: none) {
+    ::view-transition-old(pf-results) {
+      display: none;
+    }
+    ::view-transition-group(pf-results),
+    ::view-transition-new(pf-results) {
+      animation: none;
+    }
+  }
+  .pfresults pagefind-summary,
+  .pfresults pagefind-results {
+    display: block !important;
+    font: inherit !important;
+    font-variation-settings: inherit !important;
+    letter-spacing: inherit !important;
+    text-transform: inherit !important;
+    color: inherit !important;
+  }
+  .pfresults .pf-summary {
+    font: inherit !important;
+    color: inherit !important;
+  }
+  .pfresults .pf-q {
+    color: var(--mut) !important;
+  }
+  .pfwrap .pf-results {
+    gap: 0 !important;
+  }
+  .pfwrap .pf-result {
+    gap: 0 !important;
+    padding: 0.6rem 0 !important;
+    border-bottom: 1px dotted var(--line) !important;
+  }
+  .pfwrap .pf-result:last-child {
+    border-bottom: 0 !important;
+  }
+  .pfwrap .pf-result-card {
+    padding: 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: none !important;
+    box-shadow: none !important;
+  }
+  .pfwrap .pf-result-title {
+    font-size: 19px !important;
+    font-weight: 600 !important;
+    line-height: 1.4 !important;
+  }
+  .pfwrap .pf-result-link {
+    color: var(--ink) !important;
+    text-decoration: none !important;
+  }
+  .pfwrap .pf-result-link::before {
+    display: block;
+    font-family: var(--font-departure), ui-monospace, monospace;
+    font-size: var(--mono-small);
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    line-height: 1.65;
+    color: var(--acc);
+    content: attr(href);
+    content: attr(href) / '';
+  }
+  .pfwrap .pf-result-link:hover {
+    color: var(--acc) !important;
+  }
+  .pfwrap .pf-result-link:focus-visible {
+    outline: 2px solid var(--acc) !important;
+    outline-offset: 2px;
+  }
+  .pfwrap .pf-result-excerpt {
+    margin: 0.2rem 0 0 !important;
+    font-size: 15px !important;
+    line-height: 24px !important;
+    color: var(--mut) !important;
+    white-space: normal !important;
+    display: -webkit-box !important;
+    -webkit-box-orient: vertical !important;
+    -webkit-line-clamp: 2 !important;
+    line-clamp: 2 !important;
+  }
+  .pfwrap .pf-heading-chips {
+    gap: 0.5rem !important;
+    margin: 0.65rem 0 0.1rem !important;
+    padding: 0 !important;
+  }
+  .pfwrap .pf-heading-chip {
+    padding: 0 0 0 12px !important;
+    border: 0 !important;
+    border-left: 1px solid var(--line) !important;
+    border-radius: 0 !important;
+    background: none !important;
+    box-shadow: none !important;
+    font-size: inherit !important;
+    gap: 0 !important;
+  }
+  .pfwrap .pf-heading-link {
+    color: var(--ink) !important;
+    font-weight: inherit !important;
+    line-height: inherit !important;
+    font-size: 15px !important;
+    text-decoration: none !important;
+  }
+  .pfwrap .pf-heading-link:hover {
+    color: var(--acc) !important;
+  }
+  .pfwrap .pf-heading-link:focus-visible {
+    outline: 2px solid var(--acc) !important;
+    outline-offset: 2px;
+  }
+  .pfwrap .pf-heading-link::before {
+    font-family: var(--font-departure), ui-monospace, monospace;
+    font-size: var(--mono-small);
+    color: var(--acc) !important;
+    margin-inline-end: 0.6em !important;
+  }
+  .pfwrap .pf-heading-excerpt {
+    font-size: 14px !important;
+    line-height: 22px !important;
+    color: var(--mut) !important;
+  }
+  .pfwrap mark {
+    background: none !important;
+    color: var(--ink) !important;
+    font-weight: 600 !important;
+  }
+  .pfwrap mark.pf-emoji {
+    background: rgba(180, 140, 255, 0.22) !important;
+    border-radius: 2px;
+    padding: 0 0.12em;
+  }
+</style>

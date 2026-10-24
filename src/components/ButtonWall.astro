@@ -1,0 +1,115 @@
+---
+import sharp from 'sharp';
+import type { ButtonLink } from '../lib/buttons';
+interface Props {
+  buttons: ButtonLink[];
+  linked?: boolean;
+}
+const { buttons, linked = true } = Astro.props;
+
+const stills = new Map(
+  await Promise.all(
+    buttons
+      .flatMap((b) => (b.img?.endsWith('.gif') ? [b.img] : []))
+      .map(async (img) => {
+        const { pages = 1 } = await sharp(`public${img}`, { animated: true }).metadata();
+        return [img, pages > 1 ? img.replace(/\.gif$/, '.still.webp') : null] as const;
+      }),
+  ),
+);
+---
+
+<div class="wall">
+  {buttons.map((b) => {
+    if (b.text) {
+      // A site with no 88x31 of its own: a tile the same size, set in type,
+      // in that site's colours when it gives them.
+      const look = b.tile && {
+        '--tile-bg': b.tile.background,
+        '--tile-fg': b.tile.color,
+        '--tile-border': b.tile.border ?? b.tile.background,
+        '--tile-font': b.tile.font,
+        '--tile-deco': b.tile.underline ? 'underline' : 'none',
+      };
+      const cls = b.tile ? 'tile tile--own-look' : 'tile';
+      return linked && b.href ? (
+        <a class={cls} style={look} href={b.href} rel="noopener" title={b.alt ?? b.name}>
+          {b.text}
+        </a>
+      ) : (
+        <span class={cls} style={look} title={b.alt ?? b.name}>
+          {b.text}
+        </span>
+      );
+    }
+    const still = b.img && stills.get(b.img);
+    const tag = (
+      <img
+        src={b.img}
+        width="88"
+        height="31"
+        alt={b.alt ?? b.name}
+        loading="lazy"
+        decoding="async"
+      />
+    );
+    const img = still ? (
+      <picture>
+        <source media="(prefers-reduced-motion: reduce)" srcset={still} />
+        {tag}
+      </picture>
+    ) : (
+      tag
+    );
+    return linked && b.href ? (
+      <a href={b.href} rel="noopener">
+        {img}
+      </a>
+    ) : (
+      img
+    );
+  })}
+</div>
+
+<style>
+  .wall {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 3px;
+  }
+  .wall a {
+    display: block;
+    text-decoration: none;
+  }
+  .wall .tile {
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 88px;
+    height: 31px;
+    border: 1px solid var(--acc);
+    background: var(--panel);
+    color: var(--acc);
+    font-family: var(--font-departure), ui-monospace, monospace;
+    font-size: 22px;
+    line-height: 1;
+  }
+  .wall .tile--own-look {
+    background: var(--tile-bg);
+    color: var(--tile-fg);
+    border-color: var(--tile-border);
+    font: var(--tile-font, inherit);
+    text-decoration: var(--tile-deco);
+  }
+  .wall a.tile:not(.tile--own-look):hover,
+  .wall a.tile:not(.tile--own-look):focus-visible {
+    background: var(--acc);
+    color: var(--bg);
+  }
+  .wall picture,
+  .wall img {
+    display: block;
+    image-rendering: pixelated;
+  }
+</style>

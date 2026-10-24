@@ -1,0 +1,72 @@
+---
+import SocialCard from './SocialCard.astro';
+import { fetchSocialPost } from '../lib/social';
+import { formatDate } from '../lib/posts';
+
+interface Props {
+  id: string;
+}
+
+const { id } = Astro.props;
+const post = await fetchSocialPost(id);
+
+const iso = post?.date && !Number.isNaN(Date.parse(post.date)) ? post.date : null;
+const dateLabel = iso ? formatDate(new Date(iso)) : (post?.date ?? null);
+---
+
+{
+  post && (
+    <article class="social" data-platform={post.platform}>
+      <header class="social__head">
+        {post.avatar && (
+          <img
+            class="social__avatar"
+            src={post.avatar}
+            alt=""
+            width="40"
+            height="40"
+            loading="lazy"
+            decoding="async"
+          />
+        )}
+        {(post.name || post.handle) && (
+          <div class="social__who">
+            {post.name && <span class="social__name">{post.name}</span>}
+            {post.handle && <span class="social__handle">{post.handle}</span>}
+          </div>
+        )}
+      </header>
+
+      <div class="social__body" set:html={post.bodyHtml} />
+
+      {post.media.length > 0 && (
+        <div class="social__media" data-count={Math.min(post.media.length, 4)}>
+          {post.media.map((m) => (
+            <figure class="social__figure">
+              <figcaption class="frame__bar">
+                <span class="frame__label">{m.alt || 'image'}</span>
+              </figcaption>
+              <img src={m.src} alt={m.alt} loading="lazy" decoding="async" />
+            </figure>
+          ))}
+        </div>
+      )}
+
+      {post.card && (
+        <SocialCard
+          url={post.card.url}
+          image={post.card.image}
+          provider={post.card.provider}
+          title={post.card.title}
+          description={post.card.description}
+        />
+      )}
+
+      {dateLabel && (
+        <footer class="social__foot">
+          <a href={post.url}>{dateLabel}</a>
+        </footer>
+      )}
+    </article>
+  )
+}

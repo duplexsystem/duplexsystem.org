@@ -1,0 +1,163 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Panel from '../components/Panel.astro';
+import { contact } from '../lib/contact';
+import { codeToHtml } from 'shiki';
+import violetDark from '../../shiki/violet-dark.json';
+
+const script = `( emulate sh 2>/dev/null
+h=${contact.cipher} ck=${contact.check} L=${contact.keylen}
+ok() { case $1 in 9[7-9]|1[01][0-9]|12[0-2]|4[89]|5[0-7]|64|46|95|43|45) ;; *) return 1;; esac; }
+p=0
+while [ $p -lt $L ]; do
+  s= k=0
+  while [ $k -lt 256 ]; do
+    d=$h i=0 g=1
+    while [ -n "$d" ]; do
+      b=$((0x\${d%"\${d#??}"})) d=\${d#??}
+      [ $((i%L)) -eq $p ] && { ok $((b^k)) || { g=0; break; }; }
+      i=$((i+1))
+    done
+    [ $g = 1 ] && s="$s $k"
+    k=$((k+1))
+  done
+  case $p in 0) K0=$s;; 1) K1=$s;; *) K2=$s;; esac
+  p=$((p+1))
+done
+for x in $K0; do for y in $K1; do for z in $K2; do
+  d=$h i=0 H=$((0x811c9dc5)) o=
+  while [ -n "$d" ]; do
+    b=$((0x\${d%"\${d#??}"})) d=\${d#??}
+    case $((i%L)) in 0) k=$x;; 1) k=$y;; *) k=$z;; esac
+    c=$((b^k)) H=$(( ((H^c)*16777619) & 0xFFFFFFFF ))
+    o=$o$(printf "\\\\$(printf %03o $c)") i=$((i+1))
+  done
+  [ "$(printf %08x $H)" = "$ck" ] && printf '%s\\n' "$o"
+done; done; done )`;
+
+const scriptHtml = await codeToHtml(script, {
+  lang: 'sh',
+  theme: violetDark,
+});
+---
+
+<BaseLayout title="contact · duplexsystem" description="How to reach me.">
+  <noscript>
+    <style>
+      .js-only {
+        display: none !important;
+      }
+      .nojs-only {
+        display: block !important;
+      }
+    </style>
+  </noscript>
+
+  <div class="js-only">
+    <Panel title="contact">
+      <p class="preface">You can contact me at</p>
+
+      <p class="addr-line">
+        <span class="addr-wrap">
+          <code
+            id="addr"
+            class="addr"
+            data-cipher={contact.cipher}
+            data-keylen={String(contact.keylen)}
+            data-check={contact.check}>{contact.cipher}</code
+          >
+          <a id="addr-link" class="addr-mail" href="#" hidden>mail →</a>
+        </span>
+      </p>
+      <p id="addr-status" class="mono addr-status" role="status" aria-live="polite"></p>
+    </Panel>
+  </div>
+
+  <div class="nojs-only">
+    <Panel title="contact">
+      <p class="measure">
+        No JavaScript enabled, below is a POSIX shell script you can use to derive my email.
+      </p>
+      <Fragment set:html={scriptHtml} />
+    </Panel>
+  </div>
+</BaseLayout>
+
+<script src="/js/crack-email.js" defer is:inline></script>
+
+<style>
+  .nojs-only {
+    display: none;
+  }
+
+  .preface {
+    text-align: center;
+    margin: 0.4rem 0 0.9rem;
+  }
+
+  .addr-line {
+    text-align: center;
+    margin: 0;
+  }
+  .addr {
+    font-family: var(--font-jetbrains), ui-monospace, monospace;
+    font-size: clamp(15px, 4.6vw, 26px);
+    letter-spacing: 0.01em;
+    color: var(--mut);
+    transition: color 0.45s ease;
+    overflow-wrap: anywhere;
+  }
+  .addr.is-cracked {
+    color: var(--acc);
+  }
+
+  .addr-wrap {
+    position: relative;
+    display: inline-block;
+  }
+  .addr-mail {
+    position: absolute;
+    left: 100%;
+    bottom: 0.5em;
+    margin-left: 0.9rem;
+    white-space: nowrap;
+    font-family: var(--font-departure), ui-monospace, monospace;
+    font-size: var(--mono-small);
+    opacity: 0;
+    transition: opacity 0.5s ease;
+  }
+  .addr-mail.is-in {
+    opacity: 1;
+  }
+
+  @media (max-width: 38rem) {
+    .addr-wrap {
+      display: block;
+    }
+    .addr-mail {
+      position: static;
+      display: block;
+      margin: 0.55rem 0 0;
+    }
+  }
+
+  .addr-status {
+    text-align: center;
+    font-size: var(--mono-small);
+    margin: 0.35rem 0 1.3rem;
+    min-height: 1em;
+    color: var(--acc);
+    transition: color 0.6s ease;
+  }
+  .addr-status.is-done {
+    color: var(--mut);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .addr,
+    .addr-status,
+    .addr-mail {
+      transition: none;
+    }
+  }
+</style>

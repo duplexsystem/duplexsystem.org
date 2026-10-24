@@ -1,0 +1,32 @@
+buttons:
+  - name: duplexsystem
+    href: https://duplexsystem.org
+    img: /buttons/duplexsystem.png
+    alt: duplexsystem.org
+    own: true
+  - name: they/she pronouns
+    img: /buttons/pronoun-ega-they-she.png
+    alt: 88x31 button reading "they/she"
+  - name: tranarchy
+    img: /buttons/tranarchy.gif
+    alt: 88x31 button reading "tranarchy"
+  - name: queer pride
+    img: /buttons/queerpride.gif
+    alt: 88x31 button reading "queer pride!"
+  - name: non-binary pride
+    img: /buttons/nonbinary.gif
+    alt: 88x31 button reading "non-binary pride!"
+  - name: Bloeckchengrafik
+    href: https://bloeckchengrafik.de/
+    img: /buttons/bloeckchengrafik.gif
+    alt: 88x31 button reading "Bloeckchengrafik", alternating with "works on my synthesizer"
+    friend: true
+  - name: dfsek
+    href: https://dfsek.com/
+    text: dfsek.com
+    tile:
+      background: '#181a1b'
+      color: '#bdb7af'
+      border: '#454a4d'
+      font: 16px serif
+    friend: true

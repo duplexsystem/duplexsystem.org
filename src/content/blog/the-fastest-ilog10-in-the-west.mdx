@@ -1,0 +1,901 @@
+---
+title: The Fastest (long) ilog10 in the West
+description: A write-up of how I wrote the fastest (long) ilog10 I have been able to find.
+pubDate: 2026-10-24
+tags: [optimization, math]
+---
+import Chart from '../../components/Chart.astro';
+import Flowchart from '../../components/Flowchart.astro';
+
+TL;DR:
+
+```c showLineNumbers
+#include <stdbit.h>
+#include <stdint.h>
+
+static const uint64_t pow10_lz[65] = { 10000000000000000000ULL, 10000000000000000000ULL, 10000000000000000000ULL, 10000000000000000000ULL, 1000000000000000000, 1000000000000000000, 1000000000000000000, 100000000000000000, 100000000000000000, 100000000000000000, 10000000000000000, 10000000000000000, 10000000000000000, 1000000000000000, 1000000000000000, 1000000000000000, 100000000000000, 100000000000000, 100000000000000, 100000000000000, 10000000000000, 10000000000000, 10000000000000, 1000000000000, 1000000000000, 1000000000000, 100000000000, 100000000000, 100000000000, 10000000000, 10000000000, 10000000000, 1000000000, 1000000000, 1000000000, 1000000000, 100000000, 100000000, 100000000, 10000000, 10000000, 10000000, 1000000, 1000000, 1000000, 100000, 100000, 100000, 10000, 10000, 10000, 10000, 1000, 1000, 1000, 100, 100, 100, 10, 10, 10, 1, 1, 1, 0 };
+
+uint64_t ilog10(uint64_t x)
+{
+    uint64_t lz = stdc_leading_zeros(x);
+    uint64_t e = (lz * 5) >> 4;
+    return (19 - e) - (x < pow10_lz[lz]);
+}
+```
+
+But if you're curious how I got here, and when this is the fastest, read on:
+
+## Back in 2021
+
+Back in 2021 I was attempting to write a silly little C++ program, whose purpose I have since forgotten. As I often do when learning a new language, I imposed a set of restrictions on myself to develop my skills: this time I decided to try and use no branching, loops, recursion, or division.[^1]
+
+At some point in the program I needed to count the (base 10) digits in a number. After some quick research I learned that this is the same as `ceil(log10(x + 1))`, or more simply expressed `ilog10(x) + 1`. Quick and easy, no loops or branching, I thought. However, curiosity got the better of me and I decided to take a look at glibc's implementation of these functions. Let's look at `ceil` first:
+
+```c title="[s_ceil.c](https://sourceware.org/git/?p=glibc.git;a=blob;f=sysdeps/ieee754/dbl-64/s_ceil.c)" dir="sysdeps/ieee754/dbl-64" showLineNumbers footer="Copyright (C) 1993 Sun Microsystems, Inc. [SunPro license](/licenses/SunPro.txt)"
+double
+__ceil (double x)
+{
+#if USE_CEIL_BUILTIN
+  return __builtin_ceil (x);
+#else
+  /* Use generic implementation.  */
+  int64_t i0, i;
+  int32_t j0;
+  EXTRACT_WORDS64 (i0, x);
+  j0 = ((i0 >> 52) & 0x7ff) - 0x3ff;
+  if (j0 <= 51)
+    {
+      if (j0 < 0)
+        {
+          /* return 0 * sign(x) if |x| < 1  */
+          if (i0 < 0)
+            i0 = INT64_C (0x8000000000000000);
+          else if (i0 != 0)
+            i0 = INT64_C (0x3ff0000000000000);
+        }
+      else
+        {
+          i = INT64_C (0x000fffffffffffff) >> j0;
+          if ((i0 & i) == 0)
+            return x;                   /* x is integral  */
+          if (i0 > 0)
+            i0 += UINT64_C (0x0010000000000000) >> j0;
+          i0 &= ~i;
+        }
+    }
+  else
+    {
+      if (j0 == 0x400)
+        return x + x;                   /* inf or NaN  */
+      else
+        return x;                       /* x is integral  */
+    }
+  INSERT_WORDS64 (x, i0);
+  return x;
+#endif /* ! USE_CEIL_BUILTIN  */
+}
+```
+
+Ignoring the very likely possibility of a native implementation, this is not ideal if we're avoiding branching. However, in this instance I was not concerned with handling of special floating point cases, so instead of `ceil` we can use truncation when converting from `double` to `long`, by taking `log10(x) + 1` rather than `log10(x + 1)`. Now let's look at `log10`:
+
+```c title="[e_log10.c](https://sourceware.org/git/?p=glibc.git;a=blob;f=sysdeps/ieee754/dbl-64/e_log10.c)" dir="sysdeps/ieee754/dbl-64" showLineNumbers footer="Copyright (C) 1993 Sun Microsystems, Inc. [SunPro license](/licenses/SunPro.txt)"
+double
+__ieee754_log10 (double x)
+{
+  double y, z;
+  int64_t i, hx;
+  int32_t k;
+
+  EXTRACT_WORDS64 (hx, x);
+
+  k = 0;
+  if (hx < INT64_C(0x0010000000000000))
+    {                           /* x < 2**-1022  */
+      if (__glibc_unlikely ((hx & UINT64_C(0x7fffffffffffffff)) == 0))
+        return -two54 / fabs (x);       /* log(+-0)=-inf  */
+      if (__glibc_unlikely (hx < 0))
+        return (x - x) / (x - x);       /* log(-#) = NaN  */
+      k -= 54;
+      x *= two54;               /* subnormal number, scale up x  */
+      EXTRACT_WORDS64 (hx, x);
+    }
+  /* scale up resulted in a NaN number  */
+  if (__glibc_unlikely (hx >= UINT64_C(0x7ff0000000000000)))
+    return x + x;
+  k += (hx >> 52) - 1023;
+  i = ((uint64_t) k & UINT64_C(0x8000000000000000)) >> 63;
+  hx = (hx & UINT64_C(0x000fffffffffffff)) | ((0x3ff - i) << 52);
+  y = (double) (k + i);
+  if (FIX_INT_FP_CONVERT_ZERO && y == 0.0)
+    y = 0.0;
+  INSERT_WORDS64 (x, hx);
+  z = y * log10_2lo + ivln10 * __ieee754_log (x);
+  return z + y * log10_2hi;
+}
+```
+
+This is even worse: not only is there no native implementation, it's still branching, and there's no easy alternative to use in its place.
+
+So I decided to write my own alternative. The first thing to consider is that counting the digits of an integer doesn't require us to deal with any floating point special cases or any of the other baggage that comes with IEEE 754. From this point on I shifted my focus to the more widely applicable `ilog10`, as you can easily convert that back to counting digits with a `+ 1`. So I started work on...
+
+## My first version
+
+My first version, which I came up with at the suggestion of a friend:
+
+```c showLineNumbers run="ilog10(65537)"
+long ilog10(long x)
+{
+    int n = -1;
+    while (x != 0) {
+        x /= 10;
+        n++;
+    }
+    return n;
+}
+```
+
+While this still contains looping, it is far less complicated than either of the two functions above, and serves as a clean method of understanding what it is we're trying to compute. The integer coarse logarithm base 10 is $\operatorname{ilog}_{10}(n) = y \iff 10^{y} \le n < 10^{y+1}$ or in simpler terms, the exponent of the largest power of ten that is at or below the number.
+
+Inspired by the [fast inverse square root](https://en.wikipedia.org/wiki/Fast_inverse_square_root) I decided to search for bitwise hacks to help me make this implementation more efficient. After much googling, and eventually poring over the manual for GCC, I found [`__builtin_clzl`](https://gcc.gnu.org/onlinedocs/gcc/Bit-Operation-Builtins.html#index-_005f_005fbuiltin_005fclzl).
+
+`__builtin_clzl`, or its 32-bit cousin `__builtin_clz`, is a GCC builtin function which takes an integer as its parameter and calculates the number of leading zeros in front of it. For example, were there an 8-bit version, the number of leading zeros returned by the function for `00001010` would be 4. The number of leading zeros is bounded by the datatype, e.g., the number of leading zeros for the number 1 would be 31 in a 32-bit datatype, and 63 in a 64-bit datatype, so on and so forth. On x86-64 this function becomes the opcode `bsr`, or, on supported architectures (Intel Haswell and later, AMD K10 and later), `lzcnt`[^2].
+
+But you might be thinking, "How does this relate to calculating the ilog10 of a number?" Well, the astute among you may have already noticed you can take the length of the data type, subtract one, and then subtract the number of leading zeros, and get the logarithm base 2 of a number, i.e., `ilog2(x) = TYPE_LENGTH - 1 - __builtin_clz{l}{l}(x)`.
+
+Subtracting one is necessary because bits are counted from 0: in our 8-bit example `00001010` has 4 leading zeros, and `8 - 4 = 4` is how many bits it takes to write 10, but its highest set bit is bit 3, and $2^3 = 8$ is the largest power of two not above 10, therefore $\operatorname{ilog}_2(10) = 3$.
+
+At this point, however, I was stuck. While I had the log base 2 I didn't know where to go next. This led me down several rabbit holes[^3] until I remembered the logarithm change of base formula:
+$$
+\log_b x = \frac{\log_a x}{\log_a b}
+$$
+Which in our case we would substitute 2 and 10 in for $a$ and $b$ respectively:
+$$
+\log_{10} x = \frac{\log_2 x}{\log_2 10}
+$$
+Which we can then simplify, for our purposes, to:
+$$
+\log_{10} x = \log_2 x \cdot \frac{1}{\log_2 10} \approx \log_2 x \cdot \frac{1233}{4096}
+$$
+Meaning we can take our fast `ilog2(x)` and transform it into an `ilog10(x)` by multiplying it by the fraction $\frac{1233}{4096}$.
+
+This, however, presents another problem as we have been dealing with integer types and the decimal version of $\frac{1233}{4096}$ is `0.301025390625` meaning floating point precision is required to perform this operation. Moving from floating point to integers and back is not ideal and claws back a lot of the gains we would have made doing this. However, there is a somewhat obvious way around this: by scaling up the constant (to the degree of precision we require[^4]), multiplying by it, and then dividing by the same scale factor, we can produce a very similar result but with integers. So something like $\operatorname{ilog}_2(x) \cdot 301025390625 / 10^{12}$.
+
+However, this too presents a problem as, if you recall from earlier, I was trying to avoid doing division. This can be solved by choosing our scale a bit more carefully. Instead of scaling by a power of ten we can scale by a power of two, as dividing by a power of two is just a right shift. As luck would have it our decimal version of the constant reduces down perfectly, as $10^{12} = 2^{12} \cdot 5^{12}$ and $301025390625$ can be rewritten as $1233 \cdot 5^{12}$, meaning:
+
+$$
+\frac{301025390625}{10^{12}} = \frac{1233}{2^{12}}
+$$
+
+So our division by $10^{12}$ becomes a division by $2^{12}$, i.e., a right shift by 12, leaving us with `(ilog2(x) * 1233) >> 12`, no division required.
+
+Our code so far would be something like this[^5]:
+
+```c showLineNumbers run="ilog10(754)"
+#include <limits.h>
+#include <stdint.h>
+
+#define LONGSIZE ((int)(sizeof(int64_t) * CHAR_BIT))
+
+uint64_t ilog10(uint64_t x)
+{
+    uint64_t ilog2 = (LONGSIZE - 1) - __builtin_clzll(x);
+    return (ilog2 * 1233) >> 12;
+}
+```
+
+## Fixing the off-by-one
+
+Sadly, this also has a problem, which is that this trick of doing `ilog10(x) = (ilog2(x) * 1233) >> 12` is not precise enough for all values of x. For example: if we take $x = 10$ then `ilog2(10) = 3`, and `(3 * 1233) >> 12` is `3699 >> 12`, which is `0`. However, `ilog10(10)` is of course `1`.
+
+The issue here is one of precision. The trick we are using does not preserve the same level of precision as the slower $\log_2 x \cdot \frac{1233}{4096}$. This results in soft edges around values slightly above each power of ten, where the lack of precision prevents the correct amount of accumulation from happening, preventing the output from incrementing at the right time in the series; or more simply this trick sometimes has an off-by-one error.
+
+Unfortunately there are no apparent methods of doing this operation, while maintaining (or improving)[^6] the performance characteristics of the trick, that achieve the level of accuracy needed. Meaning in order for the faster way of doing the operation to work we will need to apply some kind of correction factor.
+
+<Chart
+  title="digits vs estimate"
+  caption="The estimate lags each power of ten until the next power of two. Shaded: wrong answers."
+  spec={{
+    width: 640,
+    height: 180,
+    layer: [
+      {
+        data: { values: [ { a: 10, b: 16 }, { a: 100, b: 128 }, { a: 1000, b: 1024 } ] },
+        mark: { type: 'rect', color: '#1da5ae', opacity: 0.16 },
+        encoding: { x: { field: 'a', type: 'quantitative' }, x2: { field: 'b' } },
+      },
+      {
+        data: { values: [
+          { x: 1, v: 0, s: 'ilog10(x)' }, { x: 10, v: 1, s: 'ilog10(x)' }, { x: 100, v: 2, s: 'ilog10(x)' }, { x: 1000, v: 3, s: 'ilog10(x)' }, { x: 2048, v: 3, s: 'ilog10(x)' },
+          { x: 1, v: 0, s: 'estimate' }, { x: 16, v: 1, s: 'estimate' }, { x: 128, v: 2, s: 'estimate' }, { x: 1024, v: 3, s: 'estimate' }, { x: 2048, v: 3, s: 'estimate' },
+        ] },
+        mark: { type: 'line', interpolate: 'step-after', strokeWidth: 2 },
+        encoding: {
+          x: { field: 'x', type: 'quantitative', scale: { type: 'log', domain: [1, 2048], nice: false }, axis: { title: 'x', values: [1, 10, 100, 1000], format: 'd' } },
+          y: { field: 'v', type: 'quantitative', scale: { domain: [0, 3.5] }, axis: { title: 'result', values: [0, 1, 2, 3], format: 'd' } },
+          color: { field: 's', type: 'nominal', scale: { domain: ['ilog10(x)', 'estimate'], range: ['#9b7cf0', '#1da5ae'] }, legend: { title: null, orient: 'top-left' } },
+          strokeDash: { field: 's', type: 'nominal', scale: { domain: ['ilog10(x)', 'estimate'], range: [[1, 0], [5, 3]] }, legend: null },
+        },
+      },
+      {
+        data: { values: [ { x: 16, v: 1, t: '16' }, { x: 128, v: 2, t: '128' }, { x: 1024, v: 3, t: '1024' } ] },
+        mark: { type: 'text', align: 'left', dx: 4, dy: 10, fontSize: 10, color: '#1da5ae' },
+        encoding: { x: { field: 'x', type: 'quantitative' }, y: { field: 'v', type: 'quantitative' }, text: { field: 't' } },
+      },
+    ],
+  }}
+/>
+
+And a correction factor we will add; the simplest way of doing so is to just check if we are above the nearest power of ten, and if so add one. But how will we know at what magnitude above the power of ten to stop applying the correction?[^7] Obviously once we get close to the next power of ten, but we stop needing the correction well before then, before we even hit the midway point between two powers of ten, and applying the correction past when it is needed would become an *in-correction*. Furthermore, how will we even find the closest power of ten?
+
+The solution lies in the relationship between the number we are correcting and the nearest power of ten. Namely the number we are trying to correct, plus one, is the exponent of the power of ten that is the only one $x$ could be over and need correction. This is because at the exact number we would need to stop applying the correction, meaning our estimate has caught up, our estimate would increment and we would be comparing against the next power of ten which we would then be lower than.
+
+<Chart
+  title="x vs the next power of ten"
+  caption="Once the estimate catches up the check moves to the next power of ten, which x is under, and we no longer need to apply the correction."
+  spec={{
+    width: 640,
+    height: 260,
+    encoding: {
+      x: { type: 'quantitative', scale: { domain: [7.5, 20.5], nice: false, zero: false }, axis: { title: 'x', values: [8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20], format: 'd', grid: false } },
+      y: { type: 'quantitative', scale: { type: 'log', domain: [3.2, 180], nice: false }, axis: { title: null, values: [10, 100], format: 'd' } },
+    },
+    layer: [
+      {
+        data: { values: [ { a: 7.5, b: 15.5, o: 0.03 }, { a: 15.5, b: 20.5, o: 0.08 } ] },
+        mark: { type: 'rect', color: '#d9677a' },
+        encoding: { x: { field: 'a' }, x2: { field: 'b' }, opacity: { field: 'o', type: 'quantitative', scale: null } },
+      },
+      {
+        data: { values: [ { x: 7.5 }, { x: 7.75 }, { x: 8.0 }, { x: 8.25 }, { x: 8.5 }, { x: 8.75 }, { x: 9.0 }, { x: 9.25 }, { x: 9.5 }, { x: 9.75 }, { x: 10.0 }, { x: 10.25 }, { x: 10.5 }, { x: 10.75 }, { x: 11.0 }, { x: 11.25 }, { x: 11.5 }, { x: 11.75 }, { x: 12.0 }, { x: 12.25 }, { x: 12.5 }, { x: 12.75 }, { x: 13.0 }, { x: 13.25 }, { x: 13.5 }, { x: 13.75 }, { x: 14.0 }, { x: 14.25 }, { x: 14.5 }, { x: 14.75 }, { x: 15.0 }, { x: 15.25 }, { x: 15.5 }, { x: 15.75 }, { x: 16.0 }, { x: 16.25 }, { x: 16.5 }, { x: 16.75 }, { x: 17.0 }, { x: 17.25 }, { x: 17.5 }, { x: 17.75 }, { x: 18.0 }, { x: 18.25 }, { x: 18.5 }, { x: 18.75 }, { x: 19.0 }, { x: 19.25 }, { x: 19.5 }, { x: 19.75 }, { x: 20.0 }, { x: 20.25 }, { x: 20.5 } ] },
+        mark: { type: 'line', strokeWidth: 2, color: '#9b7cf0' },
+        encoding: { x: { field: 'x' }, y: { field: 'x' } },
+      },
+      {
+        data: { values: [ { x: 10 }, { x: 10.25 }, { x: 10.5 }, { x: 10.75 }, { x: 11.0 }, { x: 11.25 }, { x: 11.5 }, { x: 11.75 }, { x: 12.0 }, { x: 12.25 }, { x: 12.5 }, { x: 12.75 }, { x: 13.0 }, { x: 13.25 }, { x: 13.5 }, { x: 13.75 }, { x: 14.0 }, { x: 14.25 }, { x: 14.5 }, { x: 14.75 }, { x: 15.0 }, { x: 15.25 }, { x: 15.5 } ] },
+        mark: { type: 'line', strokeWidth: 4, color: '#1da5ae' },
+        encoding: { x: { field: 'x' }, y: { field: 'x' } },
+      },
+      {
+        data: { values: [ { x: 8, s: 'no correction' }, { x: 9, s: 'no correction' }, { x: 10, s: '+1 applied' }, { x: 11, s: '+1 applied' }, { x: 12, s: '+1 applied' }, { x: 13, s: '+1 applied' }, { x: 14, s: '+1 applied' }, { x: 15, s: '+1 applied' }, { x: 16, s: 'no correction' }, { x: 17, s: 'no correction' }, { x: 18, s: 'no correction' }, { x: 19, s: 'no correction' }, { x: 20, s: 'no correction' } ] },
+        mark: { type: 'point', filled: true, size: 70, stroke: '#0f0b16', strokeWidth: 2, opacity: 1 },
+        encoding: {
+          x: { field: 'x' },
+          y: { field: 'x' },
+          color: { field: 's', type: 'nominal', scale: { domain: ['+1 applied', 'no correction'], range: ['#1da5ae', '#9b7cf0'] }, legend: null },
+        },
+      },
+      {
+        data: { values: [ { x: 7.5, y: 10 }, { x: 15.5, y: 100 }, { x: 20.5, y: 100 } ] },
+        mark: { type: 'line', interpolate: 'step-after', strokeDash: [5, 3], strokeWidth: 2, color: '#1da5ae' },
+        encoding: { x: { field: 'x' }, y: { field: 'y' } },
+      },
+      {
+        data: { values: [ { x: 8.85, y: 10, t: 'checked against 10', c: '#1da5ae' }, { x: 18, y: 100, t: 'checked against 100', c: '#1da5ae' }, { x: 12.5, y: 15.5, t: '+1 applied', c: '#1da5ae' } ] },
+        mark: { type: 'text', fontSize: 11, dy: -10 },
+        encoding: { x: { field: 'x' }, y: { field: 'y' }, text: { field: 't' }, color: { field: 'c', type: 'nominal', scale: null } },
+      },
+      {
+        data: { values: [ { x: 15.8, y: 62, t: '[1] estimate 0 => 1', c: '#d9677a' }, { x: 15.8, y: 41, t: '[2] check jumps 10 => 100', c: '#1da5ae' }, { x: 15.8, y: 27.5, t: '[3] 16 < 100; +1 stops', c: '#ddd4ea' } ] },
+        mark: { type: 'text', fontSize: 11, align: 'left' },
+        encoding: { x: { field: 'x' }, y: { field: 'y' }, text: { field: 't' }, color: { field: 'c', type: 'nominal', scale: null } },
+      },
+      {
+        data: { values: [ { x: 15.5, y: 92 } ] },
+        mark: { type: 'point', shape: 'triangle-up', filled: true, size: 80, color: '#1da5ae', opacity: 1 },
+        encoding: { x: { field: 'x' }, y: { field: 'y' } },
+      },
+      {
+        data: { values: [ { x: 16, y: 17.6, y2: 24.2 } ] },
+        mark: { type: 'rule', color: '#ddd4ea', strokeWidth: 1, opacity: 0.7 },
+        encoding: { x: { field: 'x' }, y: { field: 'y' }, y2: { field: 'y2' } },
+      },
+      {
+        data: { values: [ { x: 16, y: 16 } ] },
+        mark: { type: 'point', shape: 'circle', filled: false, size: 260, strokeWidth: 2, color: '#ddd4ea', opacity: 1 },
+        encoding: { x: { field: 'x' }, y: { field: 'y' } },
+      },
+      {
+        data: { values: [ { a: 7.55, b: 15.45, t: 'estimate: 0', m: 11.5 }, { a: 15.55, b: 20.45, t: 'estimate: 1', m: 18 } ] },
+        layer: [
+          { mark: { type: 'rect', color: '#d9677a', opacity: 0.85, cornerRadius: 3 }, encoding: { x: { field: 'a' }, x2: { field: 'b' }, y: { datum: 3.5 }, y2: { datum: 4.6 } } },
+          { mark: { type: 'text', fontSize: 11, color: '#0f0b16' }, encoding: { x: { field: 'm' }, y: { datum: 4.0 }, text: { field: 't' } } },
+        ],
+      },
+    ],
+  }}
+/>
+
+The code for this looks like this:
+
+```c showLineNumbers run="ilog10(15)"
+#define _GNU_SOURCE
+#include <limits.h>
+#include <math.h>
+#include <stdint.h>
+
+#define LONGSIZE ((int)(sizeof(int64_t) * CHAR_BIT))
+
+uint64_t ilog10(uint64_t x)
+{
+    uint64_t ilog2 = (LONGSIZE - 1) - __builtin_clzll(x);
+    uint64_t estimate = (ilog2 * 1233) >> 12;
+    return estimate + (x >= exp10(estimate + 1));
+}
+```
+
+This is a big improvement and now should produce correct values, but we have introduced a new library call whose implementation we need to check, `exp10`:
+
+```c title="[e_exp10.c](https://sourceware.org/git/?p=glibc.git;a=blob;f=sysdeps/ieee754/dbl-64/e_exp10.c)" dir="sysdeps/ieee754/dbl-64" showLineNumbers footer="[LGPL-2.1-or-later](/licenses/LGPL-2.1.txt)"
+double
+__exp10 (double x)
+{
+  uint64_t ix = asuint64 (x);
+  uint32_t abstop = (ix >> 52) & 0x7ff;
+
+  if (__glibc_unlikely (abstop - SmallTop >= Thresh))
+    {
+      if (abstop - SmallTop >= 0x80000000)
+	/* Avoid spurious underflow for tiny x.
+	   Note: 0 is common input.  */
+	return x + 1;
+      if (abstop == 0x7ff)
+	return ix == asuint64 (-INFINITY) ? 0.0 : x + 1.0;
+      if (x >= OFlowBound)
+	return __math_oflow (0);
+      if (x < UFlowBound)
+	return __math_uflow (0);
+
+      /* Large x is special-cased below.  */
+      abstop = 0;
+    }
+
+  /* Reduce x: z = x * N / log10(2), k = round(z).  */
+  double z = __exp_data.invlog10_2N * x;
+  double kd;
+  uint64_t ki;
+#if TOINT_INTRINSICS
+  kd = roundtoint (z);
+  ki = converttoint (z);
+#else
+  kd = math_narrow_eval (z + Shift);
+  ki = asuint64 (kd);
+  kd -= Shift;
+#endif
+
+  /* r = x - k * log10(2), r in [-0.5, 0.5].  */
+  double r = x;
+  r = __exp_data.neglog10_2hiN * kd + r;
+  r = __exp_data.neglog10_2loN * kd + r;
+
+  /* exp10(x) = 2^(k/N) * 2^(r/N).
+     Approximate the two components separately.  */
+
+  /* s = 2^(k/N), using lookup table.  */
+  uint64_t e = ki << (52 - EXP_TABLE_BITS);
+  uint64_t i = (ki & IndexMask) * 2;
+  uint64_t u = __exp_data.tab[i + 1];
+  uint64_t sbits = u + e;
+
+  double tail = asdouble (__exp_data.tab[i]);
+
+  /* 2^(r/N) ~= 1 + r * Poly(r).  */
+  double r2 = r * r;
+  double p = C (0) + r * C (1);
+  double y = C (2) + r * C (3);
+  y = y + r2 * C (4);
+  y = p + r2 * y;
+  y = tail + y * r;
+
+  if (__glibc_unlikely (abstop == 0))
+    return special_case (sbits, y, ki);
+
+  /* Assemble components:
+     y  = 2^(r/N) * 2^(k/N)
+       ~= (y + 1) * s.  */
+  double s = asdouble (sbits);
+  return s * y + s;
+}
+```
+
+Unfortunately the implementation of this also presents us with some problems. Besides the fact that using this function requires us to convert into and back out of floating point, something we have gone to great lengths to avoid, it features branching and would end up taking most of the time in our function. Not only that but for large inputs it ends up being inaccurate, causing our function to be inaccurate too.
+
+<Chart
+  title="exp10 precision loss"
+  caption="How many x below each power of ten come out wrong. Past 2^53^ a double doesn't have the precision to represent every integer, so x gets rounded up to that power of ten."
+  spec={{
+    width: 640,
+    height: 200,
+    encoding: {
+      x: { type: 'quantitative', scale: { domain: [0.4, 19.6], nice: false, zero: false }, axis: { title: 'power of ten', values: [1, 4, 7, 10, 13, 16, 19], labelExpr: "'10^' + datum.value + '^'", grid: false } },
+    },
+    layer: [
+      {
+        data: { values: [ { a: 0.4, b: 15.5 } ] },
+        mark: { type: 'rect', color: '#1da5ae', opacity: 0.08 },
+        encoding: { x: { field: 'a' }, x2: { field: 'b' } },
+      },
+      {
+        data: { values: [ { k: 16, n: 1 }, { k: 17, n: 8 }, { k: 18, n: 64 }, { k: 19, n: 1024 } ] },
+        layer: [
+          {
+            mark: { type: 'bar', width: 18, color: '#d9677a', cornerRadiusTopLeft: 3, cornerRadiusTopRight: 3 },
+            encoding: { x: { field: 'k' }, y: { field: 'n', type: 'quantitative', scale: { type: 'log', domain: [0.6, 3000], nice: false }, axis: { title: '# of x wrong', values: [1, 10, 100, 1000], format: 'd' } }, y2: { datum: 0.6 } },
+          },
+          {
+            mark: { type: 'text', fontSize: 11, color: '#ddd4ea', dy: -8 },
+            encoding: { x: { field: 'k' }, y: { field: 'n', type: 'quantitative' }, text: { field: 'n' } },
+          },
+        ],
+      },
+      {
+        data: { values: [ { k: 8.1, t: 'correct for all values of x' } ] },
+        mark: { type: 'text', fontSize: 11, color: '#1da5ae' },
+        encoding: { x: { field: 'k' }, y: { datum: 30 }, text: { field: 't' } },
+      },
+      {
+        data: { values: [ { k: 1 }, { k: 2 }, { k: 3 }, { k: 4 }, { k: 5 }, { k: 6 }, { k: 7 }, { k: 8 }, { k: 9 }, { k: 10 }, { k: 11 }, { k: 12 }, { k: 13 }, { k: 14 }, { k: 15 } ] },
+        mark: { type: 'tick', color: '#1da5ae', thickness: 2, size: 10 },
+        encoding: { x: { field: 'k' }, y: { datum: 0.7 } },
+      },
+      {
+        data: { values: [ { k: 15.5 } ] },
+        mark: { type: 'rule', color: '#9a90b0', strokeDash: [4, 3] },
+        encoding: { x: { field: 'k' } },
+      },
+      {
+        data: { values: [ { k: 15.35, t: '2^53^ ≈ 9×10^15^' } ] },
+        mark: { type: 'text', fontSize: 10, color: '#9a90b0', align: 'right' },
+        encoding: { x: { field: 'k' }, y: { datum: 1500 }, text: { field: 't' } },
+      },
+    ],
+  }}
+/>
+
+## Replacing exp10
+
+Since the accuracy problem is a product of the limitations of floating point we must use an integer function to calculate our powers of ten. The tried-and-true method, and for good reason, is a lookup table. By making a static array and mapping the index to $10^i$ we can efficiently and accurately replace libc's `exp10`:
+
+```c showLineNumbers run="ilog10(9999999999999999)"
+#include <limits.h>
+#include <stdint.h>
+
+#define LONGSIZE ((int)(sizeof(int64_t) * CHAR_BIT))
+
+static const uint64_t pow10[20] = { 1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000, 10000000000, 100000000000, 1000000000000, 10000000000000, 100000000000000, 1000000000000000, 10000000000000000, 100000000000000000, 1000000000000000000, 10000000000000000000ULL };
+
+uint64_t ilog10(uint64_t x)
+{
+    uint64_t ilog2 = (LONGSIZE - 1) - __builtin_clzll(x);
+    uint64_t estimate = (ilog2 * 1233) >> 12;
+    return estimate + (x >= pow10[estimate + 1]);
+}
+```
+
+And after applying a few clean-ups and simplifications[^8] we arrive at:
+
+```c showLineNumbers run="ilog10(42)"
+#include <limits.h>
+#include <stdint.h>
+
+#define LONGSIZE ((int)(sizeof(int64_t) * CHAR_BIT))
+
+static const uint64_t pow10[20] = { 1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000, 10000000000, 100000000000, 1000000000000, 10000000000000, 100000000000000, 1000000000000000, 10000000000000000, 100000000000000000, 1000000000000000000, 10000000000000000000ULL };
+
+uint64_t ilog10(uint64_t x)
+{
+    uint64_t estimate = ((LONGSIZE - __builtin_clzll(x)) * 1233) >> 12;
+    return estimate - (pow10[estimate] > x);
+}
+```
+
+## Stanford's version
+
+At this point I was very happy: I had successfully reduced a series of expensive libc calls to just a couple of lines of simple math. However, despite having checked this at the beginning of this process and having somehow completely missed it, I soon learned that my solution was almost identical to the [Stanford Bit Twiddling Hacks](https://graphics.stanford.edu/~seander/bithacks.html) version:
+
+```c title="[Find integer log base 10 of an integer](https://graphics.stanford.edu/~seander/bithacks.html#IntegerLog10)" dir="Bit Twiddling Hacks" showLineNumbers
+unsigned int v; // non-zero 32-bit integer value to compute the log base 10 of 
+int r;          // result goes here
+int t;          // temporary
+
+static unsigned int const PowersOf10[] = 
+    {1, 10, 100, 1000, 10000, 100000,
+     1000000, 10000000, 100000000, 1000000000};
+
+t = (IntegerLogBase2(v) + 1) * 1233 >> 12; // (use a lg2 method from above)
+r = t - (v < PowersOf10[t]);
+```
+
+And adding a similar method to find ilog2 as mine:
+
+```c showLineNumbers
+unsigned int IntegerLogBase2(unsigned int v)
+{
+    return 31 - __builtin_clz(v);
+}
+```
+
+As you can see this version features all the same tricks as mine, minus using `__builtin_clz` for `ilog2`. While I was proud of myself for having come up with a near-identical solution to Stanford Bit Hacks, I found it unfortunate that pretty much all of my work had already been done previously. Not discouraged, I decided I was going to, somehow, make this already ridiculously simple function faster. To do that I turned to the x86 assembly my function produces:
+
+```asm title="ilog10" dir="gcc 16.2.1 -O2 -march=x86-64-v3" showLineNumbers run="rdi=1233"
+xor     edx, edx
+mov     eax, 64
+lzcnt   rdx, rdi
+sub     eax, edx
+imul    eax, eax, 1233
+sar     eax, 12
+cmp     rdi, QWORD PTR pow10[0+rax*8]
+sbb     rax, 0
+ret
+```
+
+This assembly is excellent, only eight instructions[^9] and almost a direct translation of each operation into assembly:
+
+| C | Assembly | Line |
+| --- | --- | --- |
+| `__builtin_clzll(x)` | `xor edx, edx`<br/>`lzcnt rdx, rdi` | 1, 3 |
+| `LONGSIZE - …` | `mov eax, 64`<br/>`sub eax, edx` | 2, 4 |
+| `… * 1233` | `imul eax, eax, 1233` | 5 |
+| `… >> 12` | `sar eax, 12` | 6 |
+| `pow10[estimate] > x` | `cmp rdi, QWORD PTR pow10[0+rax*8]` | 7 |
+| `estimate - (…)` | `sbb rax, 0` | 8 |
+| `return` | `ret` | 9 |
+
+However, two of the operations compile into two instructions. The first is `__builtin_clzll(x)`, which gets an extra `xor` because of how some x86 CPUs implement `lzcnt`[^10]; the important thing to know is that on most CPUs this instruction is effectively free.
+
+The other is more troubling: when converting from the count of leading zeros to the bit length, a simple subtraction, `LONGSIZE - …`, produces both a `mov` and a `sub` instruction. This is because, on x86, most two-operand instructions can only take a constant value in the second operand, meaning if you are trying to operate on a constant you must put it second.
+
+This presents no problem for something like `add` which is commutative, as you can simply swap your constant and your register and produce the same result. With something non-commutative, like `sub`, however, this presents us with a problem as swapping the parameters will produce a different result, e.g., $x - y \neq y - x$.
+
+The solution to this is to move your constant into a register. But this is not ideal, as now not only do you have to execute a non-required[^11] `mov` instruction, by moving your constant into a register, you are now potentially taking up a register that could have been used for something else. This matters far more in the context of inlining, the ideal case for this function, as from the perspective of writing this function you have no idea what the implications of taking up an additional register are, and thus for best performance must assume the worst.
+
+## Getting rid of the mov
+
+But how would we fix this? For a time this stumped me. I thought it was simply impossible to improve this function any further, until one day when playing around with different compilers in [Godbolt](https://godbolt.org/), I noticed Clang applied a peculiar transformation to the assembly of a previous version of the function[^12]:
+
+```asm title="ilog10" dir="clang 22.1.8 -O2 -march=x86-64-v3" showLineNumbers run="rdi=418"
+lzcnt   rax, rdi
+xor     eax, 63
+imul    eax, eax, 1233
+shr     eax, 12
+cmp     rdi, qword ptr [8*rax + pow10+8]
+sbb     rax, -1
+ret
+```
+
+Instead of a `mov` and a `sub`, `(LONGSIZE - 1) - __builtin_clzll(x)` became a single `xor eax, 63`, which was very strange to me. How did this even work and how was it possible that it produced the same results?
+
+The answer lies in the binary. The count of leading zeros is always between 0 and 63, and 63 is `111111` in binary, all ones. Subtracting a number in that range from all ones never needs to borrow, so each bit of the result is just the opposite of the same bit in the number being subtracted, i.e., a `xor` with 63 produces the same result as subtracting from 63. Take 418, which has 55 leading zeros: $63 - 55 = 8$, and `110111` `xor` `111111` is `001000`, also 8.[^13]
+
+This is awesome as it completely eliminates the need for a `mov`, as `xor` is commutative so we can simply swap around the parameters! Unfortunately this too presents a problem; this only works because the previous version subtracts from 63. Our current version subtracts from 64, the bit length, and 64 is `1000000` in binary, not all ones, so no single `xor` can replace the `sub`.
+
+We also can't simply go back to the previous version: `__builtin_clzll(0)` is undefined in C, but on x86 the `lzcnt` instruction returns 64 for it, and $64 \oplus 63 = 127$, which makes the estimate 38. The table lookup then reads entry 39 (counting from 0) of our 20-entry table, well past its end, reading whatever memory happens to come after it. Our current version has no such issue: for 0 the bit length is 0, and the lookup stays at the first entry.
+
+But the same kind of trick still works if we come at it from the other side. Instead of $64 - n$ we can compute $n - 64$. Since $n$ is always below 64, all of its bits above the sixth are zero, and $-64$ in two's complement is exactly those bits set: `…11000000`. So an `or` of $n$ with $-64$ never has to carry, and gives $n - 64$ in a single instruction.
+
+That is the negative of the bit length we want, but the negative sign can easily be inverted: we are about to multiply by $1233$ anyway, so multiplying by $-1233$ instead inverts it and gives us the correct output:
+
+```c showLineNumbers run="ilog10(0)"
+#include <limits.h>
+#include <stdint.h>
+
+#define LONGSIZE ((int)(sizeof(int64_t) * CHAR_BIT))
+
+static const uint64_t pow10[20] = { 1, 10, 100, 1000, 10000, 100000, 1000000, 10000000, 100000000, 1000000000, 10000000000, 100000000000, 1000000000000, 10000000000000, 100000000000000, 1000000000000000, 10000000000000000, 100000000000000000, 1000000000000000000, 10000000000000000000ULL };
+
+uint64_t ilog10(uint64_t x)
+{
+    uint64_t estimate = ((__builtin_clzll(x) | (-LONGSIZE)) * -1233) >> 12;
+    return estimate - (pow10[estimate] > x);
+}
+```
+
+For 0, `lzcnt` gives 64, and $64 \mathbin{|} -64 = -64$, which the multiply and shift turn into 19, the last entry in the table, so even an input of 0 never reads out of bounds on the array.
+
+The assembly for this function is beautiful:
+
+```asm title="ilog10" dir="gcc 16.2.1 -O2 -march=x86-64-v3" showLineNumbers run="rdi=1597463007"
+xor     eax, eax
+lzcnt   rax, rdi
+or      eax, -64
+imul    eax, eax, -1233
+sar     eax, 12
+cmp     rdi, QWORD PTR pow10[0+rax*8]
+sbb     rax, 0
+ret
+```
+
+A whole seven instructions, or six if your compiler isn't padding `lzcnt` with a `xor`[^10].
+
+## Seven instructions
+
+Seven instructions seemed like the end of the road, but the `imul` kept bugging me. A multiply takes three cycles, and everything after has to wait for it to finish. When I thought about it more, I realized the only reason $\frac{1233}{4096}$ is there is because it's a very good approximation of $\log_{10}(2)$, but we don't actually need a very good approximation. We only need an estimate that's never too low and never more than one too high, since the comparison against the table gives us the rest of the precision.
+
+So I started looking for the cheapest multiply and shift that still has enough precision. The OR trick already gives us `lz - 64`, which is the bit length as a negative number, so what if we multiply that by 5 and shift right by 4? That's multiplying by $\frac{5}{16} = 0.3125$, a worse guess at $\log_{10}(2) \approx 0.30103$ than before, but it's still within one of the right answer for every possible number of leading zeros, and since there are only 65 of those it's easy to check them all.
+
+Something nice then happens with the math. $(5 \cdot \mathit{lz} - 320) \gg 4$ is exactly $((5 \cdot \mathit{lz}) \gg 4) - 20$, because $320 = 20 \cdot 16$, so the $-64$ folds right out of the shift and we don't need the OR at all anymore. If we store the powers of ten in reverse, $e = (5 \cdot \mathit{lz}) \gg 4$ can index them directly and the estimate is just $19 - e$. Even better, multiplying by 5 doesn't need a multiply on x86, as `lea` can add a register to four times itself in a single instruction, i.e., $5x = x + 4x$.
+
+This makes our code:
+
+```c showLineNumbers run="ilog10(4096)"
+#include <stdbit.h>
+#include <stdint.h>
+
+static const uint64_t pow10_rev[21] = { 10000000000000000000ULL, 1000000000000000000, 100000000000000000, 10000000000000000, 1000000000000000, 100000000000000, 10000000000000, 1000000000000, 100000000000, 10000000000, 1000000000, 100000000, 10000000, 1000000, 100000, 10000, 1000, 100, 10, 1, 0 };
+
+uint64_t ilog10(uint64_t x)
+{
+    uint64_t e = (stdc_leading_zeros(x) * 5) >> 4;
+    return (19 - e) - (x < pow10_rev[e]);
+}
+```
+
+This version also has two other small changes. `stdc_leading_zeros` is C23's standard version of `__builtin_clzll`, and unlike the builtin it's defined for 0, where it returns the width of the type, which means `ilog10(0)` is now actually defined instead of relying on `lzcnt` returning 64, which may not be true on all architectures. It still gets compiled down to a single `lzcnt` on x86-64-v3.
+
+The table also needed a 21st entry, a 0, which is what keeps a zero input from accessing the array out of bounds. For 0 `lzcnt` gives 64, so $e = 20$, $0 < 0$ is false, and we return $19 - 20 = -1$, which I think is a more sensible answer for the log of 0 than the 18 the old version gave.
+
+```asm title="ilog10" dir="gcc 16.2.1 -O2 -march=x86-64-v3" showLineNumbers run="rdi=0"
+xor     eax, eax
+lzcnt   rax, rdi
+lea     rdx, [rax+rax*4]
+mov     eax, 19
+shr     rdx, 4
+sub     rax, rdx
+cmp     rdi, QWORD PTR pow10_rev[0+rdx*8]
+sbb     rax, 0
+ret
+```
+
+## Why the longer version is faster
+
+If you've been counting you'll notice this version is actually one instruction longer than before, eight up from seven. Instruction count turns out not to be the whole story, because a modern CPU doesn't run instructions one at a time. If an instruction doesn't need the result of the one before it, the CPU can start it without waiting for the previous one to finish, called out-of-order execution. What actually decides how long you wait for the answer is the longest run of instructions where each one has to wait for the one before it to finish, called the critical path. In this version it's the five instructions along the top of this graph:
+
+<Flowchart
+  direction="LR"
+  title="critical path"
+  dir="[Zen 3](https://www.agner.org/optimize/instruction_tables.pdf#page=113)"
+  nodes={[
+    { id: 'x', label: 'rdi', shape: 'text' },
+    { id: 'lzcnt', label: 'lzcnt', detail: '1 cycle' },
+    { id: 'lea', label: 'lea', detail: '1 cycle' },
+    { id: 'shr', label: 'shr', detail: '1 cycle' },
+    { id: 'cmp', label: 'load + cmp', detail: '~5 cycles' },
+    { id: 'sbb', label: 'sbb', detail: '1 cycle' },
+    { id: 'mov', label: 'mov 19', detail: 'no inputs' },
+    { id: 'sub', label: 'sub', detail: '1 cycle' },
+    { id: 'xor', label: 'xor', detail: 'no inputs' },
+  ]}
+  edges={[
+    { from: 'x', to: 'lzcnt' },
+    { from: 'lzcnt', to: 'lea', label: 'rax' },
+    { from: 'lea', to: 'shr', label: 'rdx' },
+    { from: 'shr', to: 'cmp', label: 'rdx' },
+    { from: 'x', to: 'cmp', label: 'rdi' },
+    { from: 'cmp', to: 'sbb', label: 'CF' },
+    { from: 'shr', to: 'sub', label: 'rdx' },
+    { from: 'mov', to: 'sub', label: 'rax' },
+    { from: 'sub', to: 'sbb', label: 'rax' },
+    { from: 'xor', to: 'lzcnt', label: 'rax', dashed: true },
+  ]}
+  path={['lzcnt', 'lea', 'shr', 'cmp', 'sbb']}
+/>
+
+The other three instructions aren't part of the critical path. `xor eax, eax` and `mov eax, 19` don't need anything, so they are executed right away, and `sub rax, rdx` only needs the result of `shr`, the same as the table load, so the CPU does it while the load is still waiting on memory. In the old version the load had to wait for `lzcnt`, then `or`, `imul` and then `sar`:
+
+<Flowchart
+  direction="LR"
+  title="previous critical path"
+  dir="[Zen 3](https://www.agner.org/optimize/instruction_tables.pdf#page=113)"
+  nodes={[
+    { id: 'x', label: 'rdi', shape: 'text' },
+    { id: 'lzcnt', label: 'lzcnt', detail: '1 cycle' },
+    { id: 'or', label: 'or', detail: '1 cycle' },
+    { id: 'imul', label: 'imul', detail: '3 cycles' },
+    { id: 'sar', label: 'sar', detail: '1 cycle' },
+    { id: 'cmp', label: 'load + cmp', detail: '~5 cycles' },
+    { id: 'sbb', label: 'sbb', detail: '1 cycle' },
+    { id: 'xor', label: 'xor', detail: 'no inputs' },
+  ]}
+  edges={[
+    { from: 'x', to: 'lzcnt' },
+    { from: 'lzcnt', to: 'or', label: 'rax' },
+    { from: 'or', to: 'imul', label: 'eax' },
+    { from: 'imul', to: 'sar', label: 'eax' },
+    { from: 'sar', to: 'cmp', label: 'rax' },
+    { from: 'x', to: 'cmp', label: 'rdi' },
+    { from: 'cmp', to: 'sbb', label: 'CF' },
+    { from: 'sar', to: 'sbb', label: 'rax' },
+    { from: 'xor', to: 'lzcnt', label: 'rax', dashed: true },
+  ]}
+  path={['lzcnt', 'or', 'imul', 'sar', 'cmp', 'sbb']}
+/>
+
+So the old version spent five cycles computing the address to load from, and this one spends two, on `lea` and `shr`.[^14]
+
+| processor | previous | current | % faster |
+| --- | --- | --- | --- |
+| 5950x (AMD Zen 3), GCC 16 | 5.66 | 4.76 | 16% |
+| 5950x (AMD Zen 3), Clang 22 | 6.40 | 5.58 | 13% |
+| i7-8700K (Intel Coffee Lake), GCC 14 | 4.87 | 4.05 | 17% |
+| Arm Cortex-A76 (Raspberry Pi 5), GCC 14 | 7.14 | 6.31 | 12% |
+Table: caption="ns/call (lower is better)"
+
+The new version is faster on every machine and compiler I tried it on, by 12 to 17 percent, and I was feeling pretty good about myself. Then, on my way to publish this post, I once again went looking for anyone who had done better, and found Daniel Lemire.
+
+## Lemire's version
+
+If you've ever tried to do micro-optimization work like this you've probably come across Daniel Lemire. He's a professor who makes similar posts, and one of the people behind simdjson and fast_float. In January 2025 he wrote [Counting the digits of 64-bit integers](https://lemire.me/blog/2025/01/07/counting-the-digits-of-64-bit-integers/), and one of the versions in it is the fastest I've seen anyone come up with. It counts the number of digits (what originally led me down this path), rather than taking the log, but just like mine his can easily be converted between counting digits and `ilog10`.
+
+```cpp title="[alternative_digit_count_two_tables](https://lemire.me/blog/2025/01/07/counting-the-digits-of-64-bit-integers/)" showLineNumbers
+int alternative_digit_count_two_tables(uint64_t x) {
+  static int digits[65] = {19, 19, 19, 19, 18, 18, 18, 17, 17, 17, 16, 16, 16, 16, 15, 15, 15, 14, 14, 14, 13, 13, 13, 13, 12, 12, 12, 11, 11, 11, 10, 10, 10, 10, 9, 9, 9, 8, 8, 8, 7, 7, 7, 7, 6, 6, 6, 5, 5, 5, 4, 4, 4, 4, 3, 3, 3, 2, 2, 2, 1, 1, 1, 1, 1};
+  static uint64_t table[65] = {18446744073709551615ULL, 18446744073709551615ULL, 18446744073709551615ULL, 18446744073709551615ULL, 999999999999999999ULL, 999999999999999999ULL, 999999999999999999ULL, 99999999999999999ULL, 99999999999999999ULL, 99999999999999999ULL, 9999999999999999ULL, 9999999999999999ULL, 9999999999999999ULL, 9999999999999999ULL, 999999999999999ULL, 999999999999999ULL, 999999999999999ULL, 99999999999999ULL, 99999999999999ULL, 99999999999999ULL, 9999999999999ULL, 9999999999999ULL, 9999999999999ULL, 9999999999999ULL, 999999999999ULL, 999999999999ULL, 999999999999ULL, 99999999999ULL, 99999999999ULL, 99999999999ULL, 9999999999ULL, 9999999999ULL, 9999999999ULL, 9999999999ULL, 999999999ULL, 999999999ULL, 999999999ULL, 99999999ULL, 99999999ULL, 99999999ULL, 9999999ULL, 9999999ULL, 9999999ULL, 9999999ULL, 999999ULL, 999999ULL, 999999ULL, 99999ULL, 99999ULL, 99999ULL, 9999ULL, 9999ULL, 9999ULL, 9999ULL, 999ULL, 999ULL, 999ULL, 99ULL, 99ULL, 99ULL, 9ULL, 9ULL, 9ULL, 9ULL, 0ULL};
+  int log = std::countl_zero(x);
+  uint64_t low = table[log];
+  uint64_t high = digits[log];
+  return (x > low) + high;
+}
+```
+
+His idea is to not calculate anything at all. The leading zero count goes straight into two different tables. `digits[lz]` is how many digits the smallest number with that many leading zeros has, and `table[lz]` is the largest number with that many digits, $10^d - 1$[^15], so `x > table[lz]` means x has one more digit, and that comparison is the entire correction. Since both tables are indexed by the leading zero count itself, the CPU can start both loads as soon as `lzcnt` finishes.
+
+```asm title="digit_count" dir="g++ 16.2.1 -std=c++20 -O2 -march=x86-64-v3" showLineNumbers
+xor     eax, eax
+lzcnt   rax, rdi
+cmp     QWORD PTR table[0+rax*8], rdi
+mov     eax, DWORD PTR digits[0+rax*4]
+adc     eax, 0
+ret
+```
+
+Natively, his beats my folded version on every machine I tried. Compare what the first table load has to wait for in each. In his it only waits for `lzcnt`, while in mine it waits for `lzcnt`, then `lea`, then `shr`, which is two extra steps on the critical path on every call.
+
+## Combining the two
+
+Looking at the two next to each other, the obvious question was whether I could take the best half of each. His table load starts right away, but he needs a second table to get the answer. My estimate doesn't need a table at all, but my table load has to wait for it. So what if the table were indexed by the leading zero count like his, and the answer came from my fold?
+
+```c showLineNumbers run="ilog10(1729)"
+#include <stdbit.h>
+#include <stdint.h>
+
+static const uint64_t pow10_lz[65] = { 10000000000000000000ULL, 10000000000000000000ULL, 10000000000000000000ULL, 10000000000000000000ULL, 1000000000000000000, 1000000000000000000, 1000000000000000000, 100000000000000000, 100000000000000000, 100000000000000000, 10000000000000000, 10000000000000000, 10000000000000000, 1000000000000000, 1000000000000000, 1000000000000000, 100000000000000, 100000000000000, 100000000000000, 100000000000000, 10000000000000, 10000000000000, 10000000000000, 1000000000000, 1000000000000, 1000000000000, 100000000000, 100000000000, 100000000000, 10000000000, 10000000000, 10000000000, 1000000000, 1000000000, 1000000000, 1000000000, 100000000, 100000000, 100000000, 10000000, 10000000, 10000000, 1000000, 1000000, 1000000, 100000, 100000, 100000, 10000, 10000, 10000, 10000, 1000, 1000, 1000, 100, 100, 100, 10, 10, 10, 1, 1, 1, 0 };
+
+uint64_t ilog10(uint64_t x)
+{
+    uint64_t lz = stdc_leading_zeros(x);
+    uint64_t e = (lz * 5) >> 4;
+    return (19 - e) - (x < pow10_lz[lz]);
+}
+```
+
+```asm title="ilog10" dir="gcc 16.2.1 -O2 -march=x86-64-v3" showLineNumbers run="rdi=8086"
+xor     edx, edx
+mov     eax, 19
+lzcnt   rdx, rdi
+lea     rcx, [rdx+rdx*4]
+shr     rcx, 4
+sub     rax, rcx
+cmp     rdi, QWORD PTR pow10_lz[0+rdx*8]
+sbb     rax, 0
+ret
+```
+
+The important line in the assembly is 7. The table load there only needs `rdx`, which `lzcnt` produced on line 3, so it can start straight away. Meanwhile lines 4 to 6 work out $19 - e$ from the same `rdx`, so by the time the load comes back that's ready too, and the `sbb` on line 8 finishes off with both. That makes the critical path `lzcnt`, the load and compare, then `sbb`, which is as short as Lemire's. The difference is that mine makes one table load instead of two, from a single 520-byte table, while his two tables total 780 bytes as published.
+
+<Chart
+  title="latency: Lemire vs. Mine"
+  spec={{
+    width: 640,
+    height: 220,
+    data: { values: [
+      { env: 'Zen 3 GCC', f: 'Lemire', ns: 4.47 }, { env: 'Zen 3 GCC', f: 'Mine', ns: 4.17 },
+      { env: 'Zen 3 Clang', f: 'Lemire', ns: 4.69 }, { env: 'Zen 3 Clang', f: 'Mine', ns: 4.46 },
+      { env: '8700K GCC', f: 'Lemire', ns: 3.81 }, { env: '8700K GCC', f: 'Mine', ns: 3.57 },
+      { env: 'Zen 3 Firefox', f: 'Lemire', ns: 5.82 }, { env: 'Zen 3 Firefox', f: 'Mine', ns: 5.52 },
+      { env: 'Zen 3 Chrome', f: 'Lemire', ns: 5.82 }, { env: 'Zen 3 Chrome', f: 'Mine', ns: 5.59 },
+      { env: '8700K Firefox', f: 'Lemire', ns: 5.18 }, { env: '8700K Firefox', f: 'Mine', ns: 4.53 },
+      { env: '8700K Chrome', f: 'Lemire', ns: 5.19 }, { env: '8700K Chrome', f: 'Mine', ns: 4.81 },
+    ] },
+    mark: 'bar',
+    encoding: {
+      x: { field: 'env', type: 'nominal', sort: null, axis: { title: null, labelAngle: 0, labelFontSize: 9 } },
+      xOffset: { field: 'f', type: 'nominal', sort: ['Lemire', 'Mine'] },
+      y: { field: 'ns', type: 'quantitative', axis: { title: 'ns/call (lower is better)' } },
+      color: { field: 'f', type: 'nominal', scale: { domain: ['Lemire', 'Mine'], range: ['#9b7cf0', '#1da5ae'] }, legend: { title: null, orient: 'top-left' } },
+    },
+  }}
+/>
+
+| processor | Lemire | Mine | % faster |
+| --- | --- | --- | --- |
+| 5950x (AMD Zen 3), GCC 16 | 4.47 | **4.17** | 6.7% |
+| 5950x (AMD Zen 3), Clang 22 | 4.69 | **4.46**[^16] | 4.9% |
+| i7-8700K (Intel Coffee Lake), GCC 14 | 3.81 | **3.57** | 6.3% |
+| 5950x, Firefox 158 (WebAssembly) | 5.82 | **5.52** | 5.2% |
+| 5950x, V8 / Node 22 (WebAssembly) | 5.82 | **5.59** | 3.9% |
+| i7-8700K, Firefox 158 (WebAssembly) | 5.18 | **4.53** | 12.5% |
+| i7-8700K, V8 / Node 22 (WebAssembly) | 5.19 | **4.81** | 7.3% |
+Table: caption="ns/call (lower is better)"
+
+And it works. On x86 this is the lowest-latency 64-bit ilog10 I've been able to find, between 3.9 and 12.5 percent faster than Lemire's[^17], natively with GCC and with Clang, and in the WebAssembly engines behind both Firefox and Chrome. It's also correct for every input including 0.
+
+## Where Lemire's is still faster
+
+Lowest latency isn't the same thing as fastest, though, and thus there are two places where Lemire's still wins.
+
+The first is throughput. When the calls don't depend on each other, like a loop adding up the digit counts of a whole array, the CPU works on several at once, and what matters is how much work each call costs in total, not how long one takes from start to finish. His compiles to five instructions to my eight, and takes 21 to 33 percent less time per call[^14].
+
+The second is Arm, where his is as fast or faster even for a single call. Here are both on a Raspberry Pi 5, starting with Lemire's as G++ compiles it:
+
+```arm64 title="digit_count" dir="g++ 14.2.0 -O2 -mcpu=cortex-a76" showLineNumbers run="x0=2001"
+adrp    x1, table
+clz     x3, x0
+add     x2, x1, :lo12:table
+adrp    x1, digits
+ldr     x2, [x2, w3, sxtw 3]
+add     x1, x1, :lo12:digits
+ldr     w1, [x1, w3, sxtw 2]
+cmp     x0, x2
+cinc    w0, w1, hi
+ret
+```
+
+And mine:
+
+```arm64 title="ilog10" dir="gcc 14.2.0 -O2 -mcpu=cortex-a76" showLineNumbers run="x0=2001"
+adrp    x1, pow10_lz
+clz     x3, x0
+add     x2, x1, :lo12:pow10_lz
+add     x1, x3, x3, lsl 2
+ldr     x2, [x2, w3, sxtw 3]
+mov     x3, 19
+sub     x1, x3, x1, lsr 4
+cmp     x2, x0
+cset    x0, hi
+sub     x0, x1, x0
+ret
+```
+
+Both start their table loads as soon as `clz` is done, but after the compare his only needs a `cinc`, which adds one if the condition holds, while GCC ends mine with a `cset` and then a `sub`. Arm does have a subtract with borrow, `sbc`, that could do both at once like `sbb` does on x86, but GCC doesn't use it here, and that one extra step after the compare is enough for his to come out ahead on Arm.
+
+| processor | Lemire | Mine | % faster |
+| --- | --- | --- | --- |
+| 5950x (AMD Zen 3), GCC 16 | **0.51** | 0.76 | 32.9% |
+| 5950x (AMD Zen 3), Clang 22 | **0.45** | 0.64 | 29.7% |
+| i7-8700K (Intel Coffee Lake), GCC 14 | **0.50** | 0.73 | 31.5% |
+| Arm Cortex-A76 (Raspberry Pi 5), GCC 14 | **1.15** | 1.46 | 21.2% |
+Table: title="throughput" caption="ns/call (lower is better)"
+
+| processor | Lemire | Mine | % faster |
+| --- | --- | --- | --- |
+| Arm Cortex-A76 (Raspberry Pi 5), GCC 14 | **5.16** | 5.47 | 5.7% |
+| Raspberry Pi 5, Firefox 158 (WebAssembly) | **8.80** | 8.82 | 0.2% |
+| Raspberry Pi 5, V8 / Node 22 (WebAssembly) | **7.34** | 7.76 | 5.4% |
+Table: title="latency on Arm" caption="ns/call (lower is better)"
+
+Which one is faster for you depends on what you are doing with the answer. If your program needs it before it can perform its next task, low latency is what you want, which is where my function wins. That often covers formatting a number, since you need to know how many digits it has before you can start writing them from the end; writing numbers one after another, like the integers in a JSON array, where each one starts where the last one ended; allocating a string of exactly the right size, like Java's `Long.toString`; padding a single number to a fixed width, where you need its length to know how many spaces go before it; and any one-off call with nothing else for the CPU to overlap it with.
+
+If you're working through lots of numbers whose answers don't depend on each other, use Lemire's. That covers adding up how much space a whole array of numbers will take as text, so you can allocate one buffer for all of them; finding the widest number in a column, to know how wide to make it; counting how many numbers have each length, for a histogram or to sort them into buckets by size; and any loop where the CPU can start on the next number before it's finished with the last.
+
+## So is this the fastest ilog10?
+
+So is this the fastest ilog10? It started as my own take on what turned out to be in Stanford Bit Hacks, became my seven-instruction OR trick, then the fold, which was 12 to 17 percent faster again, and finally the hybrid, which borrows Lemire's table indexing and replaces his second table with my fold. On x86, for a single call, it's the fastest I've found with every compiler and browser engine I tried. For big batches, 32-bit integers[^18], or on Arm, Lemire's is still the one to beat, but he's in Montreal and I'm west in Denver, so I'll settle for being the fastest in the West 🤠.
+
+[^1]: For some reason I had, additionally, decided to use long types.
+[^2]: `lzcnt` is a prefixed form of `bsr` meaning a CPU which does not understand `lzcnt` but does understand `bsr` will simply run `bsr` when presented with the opcode for `lzcnt`. Besides implementation and performance differences the main difference between `lzcnt` and `bsr` is `bsr` is UB for 0 while `lzcnt` returns the operand width, which is preferable as that aligns with the rest of the possible inputs, e.g., a `lzcnt` of a 64-bit type of the number `0...01` returns 63 while `0...00` returns 64. As with `bsr`, logarithm is also undefined at zero, making the zero case orthogonal[^19] to our implementation, thus we can ignore this entirely and say the logarithm function is UB at 0 as well (and therefore it is up to the caller to handle the difference in behavior between the two opcodes, or simply avoid passing in 0 entirely), meaning both `bsr` and `lzcnt` will suffice and all x86-64 CPUs are able to run this code "correctly". If you compile without `lzcnt` (no `-march=x86-64-v3` or `-mlzcnt`), GCC emits `bsr` followed by `xor eax, 63` to flip `bsr`'s bit index back into a count, which is correct on every x86-64 CPU except at zero, where it doesn't matter as it's undefined anyway.
+[^3]: Such as (independently) discovering [OEIS A129344](https://oeis.org/A129344).
+[^4]: This does not risk overflow, as our input, `ilog2(x)`, can never exceed the type length, and the amount of precision needed is smaller than $\frac{2^{n}}{n}$, where $n$ is the bit length of the type.
+[^5]: From here on the code uses `__builtin_clzll` rather than the `__builtin_clzl` I found. `__builtin_clzl` takes an `unsigned long`, which is 64 bits on Linux and macOS but only 32 bits on Windows and on 32-bit targets, including the WebAssembly the examples in this post run in. `__builtin_clzll` takes an `unsigned long long`, which is at least 64 bits everywhere, so it matches the `uint64_t` input wherever the code is compiled.
+[^6]: Subtle foreshadowing...
+[^7]: By nature there are several powers of two between each power of ten so it would be (more) complicated to use the knowledge that it takes until the next power of 2 for the estimate to catch up and would require knowing the power of ten anyway.
+[^8]: Instead of taking the log base 2 and then adding one when $x$ has reached the next power of ten, we take the bit length of $x$, `LONGSIZE - __builtin_clzll(x)` (i.e., we drop the `- 1`). This gives an estimate that is never too low and at most one too high, so the correction flips: rather than adding one when $x$ is at or above the next power of ten, we subtract one when $x$ is below the power of ten our estimate points to. The table is then indexed with the estimate itself rather than `estimate + 1`.
+[^9]: Not counting `ret`, which gets removed when inlined, something highly likely to happen given how few instructions this gets compiled down to.
+[^10]: `lzcnt` only writes its destination register, but on some Intel CPUs (Haswell and Broadwell) it is executed as if it also read it, so it has to wait for whatever last wrote that register, a "false dependency". Zeroing the register first with `xor edx, edx` removes this wait. GCC adds it when tuning for generic x86-64 or for older Intel CPUs, but not when tuning for anything newer than Ice Lake or AMD CPUs. Clang never applies this tuning at all. The `xor` is nearly free: CPUs recognize a register xor-ed with itself as zeroing it and handle it while renaming registers, without using an execution unit, though it still takes a slot in the front end.
+[^11]: As imposed by the [Theory of computation](https://en.wikipedia.org/wiki/Theory_of_computation) rather than the implementation details of any specific computer, in this case x86.
+[^12]: This is Clang 22.1 at `-O2 -march=x86-64-v3`, compiling the earlier `(LONGSIZE - 1) - __builtin_clzll(x)` version of the function. The version of Clang I originally saw it in differs, but the transformation is the same.
+[^13]: Clang made two smaller changes as well: the `+ 1` in `pow10[estimate + 1]` became part of the address (`pow10+8`, one 8-byte entry further), and `estimate + (x >= …)` became `sbb rax, -1`, which adds one and then subtracts the carry.
+[^14]: Measured on an AMD Ryzen with Zen 3 cores, an Intel i7-8700K (Coffee Lake) and a Raspberry Pi 5 (Cortex-A76), each pinned to one core, best of 9 runs, over 16,384 random inputs spread evenly across 1 to 20 digits. "Latency" means every call wait for the previous one (each result picks the next input from the array), so the time includes the array load; compare columns, but not absolute numbers. "Throughput" adds up the results over the array, so calls can overlap. Browser numbers are WebAssembly built from C with Clang, run in Firefox 158's SpiderMonkey and Node 22's V8.
+[^15]: Except for the first entry, which is why the version in Lemire's post, also in [his blog's code repository](https://github.com/lemire/Code-used-on-Daniel-Lemire-s-blog/blob/master/2025/01/07/include/digitcount.h), gives the wrong answer for every number from $10^{19}$ up, i.e. every 20-digit number, which it returns as having 19 digits. All of them have no leading zeros, so they use the first entry, whose threshold is `UINT64_MAX`, and since no 64-bit number is bigger, the $+1$ never happens. The corrected version in [fastfloat/int_serialization_benchmark](https://github.com/fastfloat/int_serialization_benchmark/blob/main/src/digitcount.h) uses a threshold of $10^{19} - 1$ instead.
+[^16]: With Clang, this needs one extra line to come out as above: an empty `asm` statement that stops Clang from rearranging `19 - e` into a slower sequence, `uint64_t r = 19 - e; __asm__("" : "+r"(r)); return r - (x < pow10_lz[lz]);`. Without it, Clang's output is 4.99 ns, slower than Lemire's. GCC doesn't need it.
+[^17]: Measured as in [^14], on the same machines and inputs. Lemire's numbers are the best I measured for his code on each machine.
+[^18]: No benchmarks are provided here but my testing shows that my version becomes *slightly* slower than Lemire's in a 32-bit setting, likely not enough to mater but since the tables would need to be different anyways I would prefer his.
+[^19]: A word that is used only rarely at the U.S. Supreme Court. See page 26 of the [oral argument transcript](https://www.supremecourt.gov/oral_arguments/argument_transcripts/2009/07-11191.pdf#page=26) in *Briscoe v. Virginia* (2010), or the [audio version](https://www.oyez.org/cases/2009/07-11191) beginning at 22:30.

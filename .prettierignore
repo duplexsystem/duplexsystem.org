@@ -1,0 +1,13 @@
+dist/
+dist-preview/
+dist-preview-stage/
+dist-lock/
+dist-verify/
+.astro/
+embed-cache/
+package-lock.json
+src/assets/
+public/fonts/
+shiki/violet-dark.json
+src/content/blog/
+README.md

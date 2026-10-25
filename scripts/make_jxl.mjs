@@ -36,7 +36,7 @@ async function cjxl() {
     const { stdout, stderr } = await run('cjxl', ['--version']);
     const version = (stdout + stderr).trim().split('\n')[0];
     const probe = mkdtempSync(join(tmpdir(), 'jxl-probe-'));
-    let effort = ['-e', '10'];
+    let effort = null;
     try {
       const png = join(probe, 'p.png');
       await writeFile(
@@ -45,21 +45,22 @@ async function cjxl() {
           .png()
           .toBuffer(),
       );
-      await run('cjxl', [
-        '-d',
-        '0',
-        '-e',
-        '11',
-        '--allow_expert_options',
-        '--quiet',
-        png,
-        join(probe, 'p.jxl'),
-      ]);
-      effort = ['-e', '11', '--allow_expert_options'];
-    } catch {
+      for (const e of [
+        ['-e', '11', '--allow_expert_options'],
+        ['-e', '10'],
+        ['-e', '9'],
+      ]) {
+        try {
+          await run('cjxl', ['-d', '0', ...e, '--quiet', png, join(probe, 'p.jxl')]);
+          effort = e;
+          break;
+        } catch {
+        }
+      }
     } finally {
       rmSync(probe, { recursive: true, force: true });
     }
+    if (!effort) throw new Error('cjxl takes none of -e 11, 10 or 9');
     cjxlInfo = { version, effort };
   } catch {
     cjxlInfo = null;

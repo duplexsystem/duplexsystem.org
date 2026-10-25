@@ -10,7 +10,7 @@
     "serve": "node scripts/serve.mjs",
     "test": "vitest run",
     "deploy": "npm run build && rsync -az --delete dist/ duplexsystem.org:/var/www/duplexsystem.org/",
-    "verify:embeds": "rm -rf dist-verify && INCLUDE_DRAFTS=1 astro build --outDir dist-verify && (node scripts/check_embeds.mjs dist-verify; ec=$?; rm -rf dist-verify; exit $ec)",
+    "verify:embeds": "python3 scripts/subset_fonts.py --full && rm -rf dist-verify && INCLUDE_DRAFTS=1 astro build --outDir dist-verify && npx pagefind --site dist-verify && INCLUDE_DRAFTS=1 node scripts/postprocess.mjs dist-verify && (node scripts/check_embeds.mjs dist-verify; ec=$?; rm -rf dist-verify; exit $ec)",
     "preview:build": "python3 scripts/subset_fonts.py --full && INCLUDE_DRAFTS=1 python3 scripts/make_post_cards.py && rm -rf dist-preview-stage && INCLUDE_DRAFTS=1 PORTAL_ORIGIN=${PORTAL_ORIGIN:-http://localhost:8088/} astro build --outDir dist-preview-stage && npx pagefind --site dist-preview-stage && INCLUDE_DRAFTS=1 node scripts/postprocess.mjs dist-preview-stage --spelling && mkdir -p dist-preview && rsync -a --delete-delay dist-preview-stage/ dist-preview/",
     "fonts:lock": "npm run prebuild && rm -rf dist-lock && astro build --outDir dist-lock && npx pagefind --site dist-lock && node scripts/postprocess.mjs dist-lock && node scripts/lock_font_chars.mjs dist-lock && python3 scripts/subset_fonts.py && rm -rf dist-lock"
   },

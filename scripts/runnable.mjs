@@ -50,6 +50,7 @@ export function clangFlags(sys) {
     '--target=wasm32-wasi',
     '-Wno-deprecated',
     `--sysroot=${sys.root}`,
+    '-nostdlibinc',
     '-isystem',
     sys.include,
     '-idirafter',

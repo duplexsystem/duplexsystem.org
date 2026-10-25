@@ -106,7 +106,7 @@
   function where(i, f) {
     const left = Math.max(0, Math.ceil(minutes * (1 - f)));
     const at = i === 0 ? 'START' : i > count ? 'NOTES' : `§${i}/${count}`;
-    return f >= 1 ? `${at} · END` : `${at} · ${left} MIN LEFT`;
+    return f >= 1 ? 'END' : `${at} · ${left} MIN LEFT`;
   }
 
   function enter(i, quiet) {

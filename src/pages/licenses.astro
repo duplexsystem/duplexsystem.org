@@ -108,6 +108,7 @@ const COMPONENTS = [
   },
 ];
 
+const breakable = (text: string) => text.split(/(?<=\/)/);
 ---
 
 <BaseLayout title="licenses · duplexsystem" description="Licenses.">
@@ -140,26 +141,33 @@ const COMPONENTS = [
           >GNU JavaScript License Web Labels</a
         > convention, all scripts on this site are appropriately tagged.
       </p>
+      <div class="table-scroll">
       <table id="jslicense-labels1">
         <tr><td><b>File</b></td><td><b>License</b></td><td><b>Source</b></td></tr>
         {
           SCRIPTS.map((s) => (
             <tr>
               <td>
-                <a href={s.file}>{s.file.split('/').pop()}</a>
+                <a href={s.file}>
+                  {breakable(s.file.split('/').pop() ?? '').map((part, i) => (i ? <><wbr />{part}</> : part))}
+                </a>
               </td>
               <td>
                 <a href={s.licenseUrl}>{s.license}</a>
               </td>
               <td>
-                <a href={s.source}>{s.sourceLabel}</a>
+                <a href={s.source}>
+                  {breakable(s.sourceLabel).map((part, i) => (i ? <><wbr />{part}</> : part))}
+                </a>
               </td>
             </tr>
           ))
         }
       </table>
+      </div>
 
       <h2>Asset Licenses</h2>
+      <div class="table-scroll">
       <table>
         <tr><td><b>Asset</b></td><td><b>License</b></td><td><b>Source</b></td></tr>
         {
@@ -172,21 +180,30 @@ const COMPONENTS = [
                 <a href={`/licenses/${c.file}`}>{c.license}</a>
               </td>
               <td>
-                <a href={c.url}>{c.url.replace(/^https:\/\/|\/$/g, '')}</a>
+                <a href={c.url}>
+                  {breakable(c.url.replace(/^https:\/\/|\/$/g, '')).map((part, i) =>
+                    i ? <><wbr />{part}</> : part,
+                  )}
+                </a>
               </td>
             </tr>
           ))
         }
       </table>
+      </div>
     </div>
   </Panel>
 </BaseLayout>
 
 <style>
+  .table-scroll {
+    overflow-x: auto;
+    margin: 1rem 0;
+  }
   table {
     border-collapse: collapse;
-    margin: 1rem 0;
     width: 100%;
+    font-size: 15px;
   }
   table :is(td, th) {
     border: 1px solid var(--line);
